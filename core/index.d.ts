@@ -667,6 +667,12 @@ export interface LLMOptions {
   apiKeyLocation?: string;
   envSecretLocations?: Record<string, string>;
   apiBase?: string;
+  baseUrl?: string;
+  sessionOverlay?: string;
+  sessionId?: string;
+  timeoutSeconds?: number;
+  streamingEnabled?: boolean;
+  workspaceName?: string;
 
   onPremProxyUrl?: string | null;
 
@@ -1712,6 +1718,11 @@ export interface JSONModelDescription {
   model: string;
   apiKey?: string;
   apiBase?: string;
+  baseUrl?: string;
+  sessionOverlay?: string;
+  sessionId?: string;
+  timeoutSeconds?: number;
+  streamingEnabled?: boolean;
 
   contextLength?: number;
   maxStopWords?: number;

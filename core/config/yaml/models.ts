@@ -52,12 +52,14 @@ async function modelConfigToBaseLLM({
   uniqueId,
   llmLogger,
   config,
+  workspaceName,
   isFromAutoDetect,
 }: {
   model: ModelConfig;
   uniqueId: string;
   llmLogger: ILLMLogger;
   config: ContinueConfig;
+  workspaceName?: string;
   isFromAutoDetect?: boolean;
 }): Promise<BaseLLM | undefined> {
   const cls = getModelClass(model);
@@ -88,6 +90,7 @@ async function modelConfigToBaseLLM({
     },
     logger: llmLogger,
     uniqueId,
+    workspaceName,
     title: model.name,
     template: model.promptTemplates?.chat,
     promptTemplates: model.promptTemplates,
@@ -151,12 +154,14 @@ async function autodetectModels({
   uniqueId,
   llmLogger,
   config,
+  workspaceName,
 }: {
   llm: BaseLLM;
   model: ModelConfig;
   uniqueId: string;
   llmLogger: ILLMLogger;
   config: ContinueConfig;
+  workspaceName?: string;
 }): Promise<BaseLLM[]> {
   try {
     const modelNames = await llm.listModels();
@@ -175,6 +180,7 @@ async function autodetectModels({
           uniqueId,
           llmLogger,
           config,
+          workspaceName,
           isFromAutoDetect: true,
         });
       }),
@@ -191,17 +197,20 @@ export async function llmsFromModelConfig({
   uniqueId,
   llmLogger,
   config,
+  workspaceName,
 }: {
   model: ModelConfig;
   uniqueId: string;
   llmLogger: ILLMLogger;
   config: ContinueConfig;
+  workspaceName?: string;
 }): Promise<BaseLLM[]> {
   const baseLlm = await modelConfigToBaseLLM({
     model,
     uniqueId,
     llmLogger,
     config,
+    workspaceName,
   });
   if (!baseLlm) {
     return [];
@@ -214,6 +223,7 @@ export async function llmsFromModelConfig({
       uniqueId,
       llmLogger,
       config,
+      workspaceName,
     });
     return models;
   } else {

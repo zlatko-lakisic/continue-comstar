@@ -43,6 +43,7 @@ export type RequestOptions = z.infer<typeof requestOptionsSchema>;
 export const modelDescriptionSchema = z.object({
   title: z.string(),
   provider: z.enum([
+    "ao_reach",
     "openai",
     "anthropic",
     "cohere",
@@ -65,6 +66,11 @@ export const modelDescriptionSchema = z.object({
   model: z.string(),
   apiKey: z.string().optional(),
   apiBase: z.string().optional(),
+  baseUrl: z.string().optional(),
+  sessionOverlay: z.string().optional(),
+  sessionId: z.string().optional(),
+  timeoutSeconds: z.number().optional(),
+  streamingEnabled: z.boolean().optional(),
   contextLength: z.number().optional(),
   template: z
     .enum([

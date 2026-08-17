@@ -10,6 +10,7 @@ import {
 import { renderTemplatedString } from "../../util/handlebars/renderTemplatedString";
 import { BaseLLM } from "../index";
 import Anthropic from "./Anthropic";
+import AOReach from "./AOReach";
 import Asksage from "./Asksage";
 import Azure from "./Azure";
 import Bedrock from "./Bedrock";
@@ -71,6 +72,7 @@ import WatsonX from "./WatsonX";
 import xAI from "./xAI";
 import zAI from "./zAI";
 export const LLMClasses = [
+  AOReach,
   Anthropic,
   Cohere,
   CometAPI,

@@ -161,6 +161,13 @@ export async function configYamlToContinueConfig(options: {
   llmLogger: ILLMLogger;
 }): Promise<{ config: ContinueConfig; errors: ConfigValidationError[] }> {
   let { unrolledAssistant, ide, ideInfo, uniqueId, llmLogger } = options;
+  const workspaceDir = (await ide.getWorkspaceDirs())[0]?.replace(
+    /[\\/]+$/,
+    "",
+  );
+  const workspaceName = workspaceDir
+    ? decodeURIComponent(workspaceDir.split(/[\\/]/).at(-1) ?? "workspace")
+    : "workspace";
 
   const localErrors: ConfigValidationError[] = [];
 
@@ -287,6 +294,7 @@ export async function configYamlToContinueConfig(options: {
         uniqueId,
         llmLogger,
         config: continueConfig,
+        workspaceName,
       });
 
       if (model.roles?.includes("chat")) {

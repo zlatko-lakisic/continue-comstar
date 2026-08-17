@@ -177,9 +177,14 @@ export type PromptTemplates = z.infer<typeof promptTemplatesSchema>;
 
 const baseModelFields = {
   name: z.string(),
-  model: z.string(),
+  model: z.string().default(""),
   apiKey: z.string().optional(),
   apiBase: z.string().optional(),
+  baseUrl: z.string().optional(),
+  sessionOverlay: z.string().optional(),
+  sessionId: z.string().optional(),
+  timeoutSeconds: z.number().optional(),
+  streamingEnabled: z.boolean().optional(),
   contextLength: z.number().optional(),
   maxStopWords: z.number().optional(),
   roles: modelRolesSchema.array().optional(),
@@ -200,14 +205,14 @@ const baseModelFields = {
 
 export const modelSchema = z.object({
   ...baseModelFields,
-  provider: z.string(),
+  provider: z.union([z.literal("ao_reach"), z.string()]),
   sourceFile: z.string().optional(),
 });
 
 export const partialModelSchema = z
   .object({
     ...baseModelFields,
-    provider: z.string(),
+    provider: z.union([z.literal("ao_reach"), z.string()]),
   })
   .partial();
 
