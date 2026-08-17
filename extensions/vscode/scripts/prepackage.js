@@ -433,6 +433,14 @@ void (async () => {
     }
   }
 
+  // Copy continue-comstar AO Reach overlay packs into the extension package
+  const overlaysSrc = path.join(__dirname, "..", "..", "..", "overlays");
+  const overlaysDest = path.join(__dirname, "..", "overlays");
+  if (fs.existsSync(overlaysSrc)) {
+    fs.cpSync(overlaysSrc, overlaysDest, { recursive: true });
+    console.log(`[info] Copied AO Reach overlays to ${overlaysDest}`);
+  }
+
   // Copy over any worker files
   fs.cpSync(
     "node_modules/jsdom/lib/jsdom/living/xhr/xhr-sync-worker.js",
@@ -465,6 +473,10 @@ void (async () => {
     "media/move-chat-panel-right.md",
     "continue_tutorial.py",
     "config_schema.json",
+
+    // AO Reach overlay packs
+    "overlays/comstar-code/agent_providers/code_assistant.yaml",
+    "overlays/comstar-code-review/agent_providers/code_reviewer.yaml",
 
     // Embeddings model
     "models/all-MiniLM-L6-v2/config.json",

@@ -71,6 +71,9 @@ export const modelDescriptionSchema = z.object({
   sessionId: z.string().optional(),
   timeoutSeconds: z.number().optional(),
   streamingEnabled: z.boolean().optional(),
+  mtlsMaterialDir: z.string().optional(),
+  filesystemTunnel: z.boolean().optional(),
+  userName: z.string().optional(),
   contextLength: z.number().optional(),
   template: z
     .enum([

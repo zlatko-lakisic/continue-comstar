@@ -3,30 +3,30 @@ version: 0.0.1
 schema: v1
 
 models:
-  # General coding — maps to the comstar-code overlay on your AO server.
-  # This overlay should include a code completion agent, a file-context agent,
-  # and your preferred underlying model.
+  # General coding — packs overlays/comstar-code and tunnels the open workspace.
   - name: COMSTAR Code
     provider: ao_reach
-    baseUrl: wss://ao.lan
+    baseUrl: wss://ao.lan:8765
     apiKey: $AO_REACH_TOKEN
     sessionOverlay: comstar-code
     timeoutSeconds: 15
+    streamingEnabled: true
+    # mtlsMaterialDir: ~/.continue-comstar/ao-mtls
+    # filesystemTunnel: true
 
-  # Code review — a slower, more thorough overlay with a critic agent.
+  # Code review — overlays/comstar-code-review
   - name: COMSTAR Review
     provider: ao_reach
-    baseUrl: wss://ao.lan
+    baseUrl: wss://ao.lan:8765
     apiKey: $AO_REACH_TOKEN
     sessionOverlay: comstar-code-review
     timeoutSeconds: 30
+    streamingEnabled: true
 
 # Session IDs are derived from workspace name by default.
-# To pin a session explicitly (e.g. to share memory across workspaces):
+# To pin a session explicitly:
 #   sessionId: comstar-zlatko-global
 
-# All other Continue config (context providers, slash commands, reranking, etc.)
-# works as normal. Only the inference backend changes.
 context:
   - provider: code
   - provider: docs
@@ -35,5 +35,3 @@ context:
   - provider: problems
   - provider: folder
   - provider: codebase
-# Continue's built-in edit, comment, share, and command-generation actions remain
-# available without redefining them in this schema-v1 config.

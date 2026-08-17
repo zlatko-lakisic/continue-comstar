@@ -673,6 +673,11 @@ export interface LLMOptions {
   timeoutSeconds?: number;
   streamingEnabled?: boolean;
   workspaceName?: string;
+  workspaceDirs?: string[];
+  mtlsMaterialDir?: string;
+  filesystemTunnel?: boolean;
+  userName?: string;
+  overlayRoot?: string;
 
   onPremProxyUrl?: string | null;
 

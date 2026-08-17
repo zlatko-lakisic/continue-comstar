@@ -53,6 +53,7 @@ async function modelConfigToBaseLLM({
   llmLogger,
   config,
   workspaceName,
+  workspaceDirs,
   isFromAutoDetect,
 }: {
   model: ModelConfig;
@@ -60,6 +61,7 @@ async function modelConfigToBaseLLM({
   llmLogger: ILLMLogger;
   config: ContinueConfig;
   workspaceName?: string;
+  workspaceDirs?: string[];
   isFromAutoDetect?: boolean;
 }): Promise<BaseLLM | undefined> {
   const cls = getModelClass(model);
@@ -91,6 +93,7 @@ async function modelConfigToBaseLLM({
     logger: llmLogger,
     uniqueId,
     workspaceName,
+    workspaceDirs,
     title: model.name,
     template: model.promptTemplates?.chat,
     promptTemplates: model.promptTemplates,
@@ -155,6 +158,7 @@ async function autodetectModels({
   llmLogger,
   config,
   workspaceName,
+  workspaceDirs,
 }: {
   llm: BaseLLM;
   model: ModelConfig;
@@ -162,6 +166,7 @@ async function autodetectModels({
   llmLogger: ILLMLogger;
   config: ContinueConfig;
   workspaceName?: string;
+  workspaceDirs?: string[];
 }): Promise<BaseLLM[]> {
   try {
     const modelNames = await llm.listModels();
@@ -181,6 +186,7 @@ async function autodetectModels({
           llmLogger,
           config,
           workspaceName,
+          workspaceDirs,
           isFromAutoDetect: true,
         });
       }),
@@ -198,12 +204,14 @@ export async function llmsFromModelConfig({
   llmLogger,
   config,
   workspaceName,
+  workspaceDirs,
 }: {
   model: ModelConfig;
   uniqueId: string;
   llmLogger: ILLMLogger;
   config: ContinueConfig;
   workspaceName?: string;
+  workspaceDirs?: string[];
 }): Promise<BaseLLM[]> {
   const baseLlm = await modelConfigToBaseLLM({
     model,
@@ -211,6 +219,7 @@ export async function llmsFromModelConfig({
     llmLogger,
     config,
     workspaceName,
+    workspaceDirs,
   });
   if (!baseLlm) {
     return [];
@@ -224,6 +233,7 @@ export async function llmsFromModelConfig({
       llmLogger,
       config,
       workspaceName,
+      workspaceDirs,
     });
     return models;
   } else {
