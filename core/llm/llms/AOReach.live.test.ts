@@ -13,7 +13,7 @@
  *
  * From continue-comstar/core:
  *   $env:AO_REACH_LIVE="1"
- *   npx jest llm/llms/AOReach.live.test.ts --testTimeout=600000
+ *   npx jest llm/llms/AOReach.live.test.ts --testTimeout=1200000
  */
 
 import fs from "fs";
@@ -137,7 +137,7 @@ function stockMcpLeak(frames: Record<string, unknown>[]): string | undefined {
 }
 
 (LIVE ? describe : describe.skip)("AOReach live against AO", () => {
-  jest.setTimeout(600_000);
+  jest.setTimeout(1_200_000);
 
   const defaultMtlsDir =
     process.env.AO_REACH_MTLS_DIR ||
