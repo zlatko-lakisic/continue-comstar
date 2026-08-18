@@ -17,6 +17,37 @@ export interface PackedOverlay {
   agentIds: string[];
 }
 
+export function overlayAllowlists(packed: PackedOverlay): {
+  allowedMcpProviderIds: string[];
+  allowedSkillIds: string[];
+} {
+  const mcp = new Set<string>();
+  for (const entry of packed.mcps) {
+    const id = String(entry.id || "").trim();
+    if (id) {
+      mcp.add(id);
+    }
+  }
+  for (const agent of packed.agents) {
+    const list = agent.mcp_providers;
+    if (Array.isArray(list)) {
+      for (const item of list) {
+        const id = String(item || "").trim();
+        if (id) {
+          mcp.add(id);
+        }
+      }
+    }
+  }
+  const skills = packed.skills
+    .map((entry) => String(entry.id || "").trim())
+    .filter(Boolean);
+  return {
+    allowedMcpProviderIds: [...mcp],
+    allowedSkillIds: skills,
+  };
+}
+
 function toClientId(bareId: string): string {
   const id = bareId.trim();
   if (!id) {
@@ -181,9 +212,15 @@ export function packAgentDefinition(
     );
   }
   if (!stat.isDirectory()) {
-    throw new Error(`AO Reach agentDefinition is not a file or folder: ${resolved}`);
+    throw new Error(
+      `AO Reach agentDefinition is not a file or folder: ${resolved}`,
+    );
   }
-  return packOverlayDirectory(resolved, resolved, options?.includeFilesystemMcp);
+  return packOverlayDirectory(
+    resolved,
+    resolved,
+    options?.includeFilesystemMcp,
+  );
 }
 
 /**

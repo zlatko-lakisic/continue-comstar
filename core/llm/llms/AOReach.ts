@@ -19,6 +19,7 @@ import {
   ReachMtlsMaterial,
 } from "./aoReachMtls.js";
 import {
+  overlayAllowlists,
   packAgentDefinition,
   packSessionOverlay,
   PackedOverlay,
@@ -195,9 +196,24 @@ class AOReach extends BaseLLM {
   }
 
   private formatMessages(messages: ChatMessage[]): string {
-    return messages
+    const assembled = messages
       .map((message) => `<${message.role}>\n${renderChatMessage(message)}`)
       .join("\n");
+    const capRaw = Number(process.env.AO_REACH_PROMPT_CHARS || "12000");
+    const cap = Number.isFinite(capRaw)
+      ? Math.max(2000, Math.min(100000, capRaw))
+      : 12000;
+    if (assembled.length <= cap) {
+      return assembled;
+    }
+    const last = messages[messages.length - 1];
+    const lastBlock =
+      last !== undefined
+        ? `<${last.role}>\n${renderChatMessage(last)}`
+        : assembled.slice(-Math.floor(cap / 2));
+    const budget = Math.max(500, cap - lastBlock.length - 40);
+    const head = assembled.slice(0, assembled.length - lastBlock.length);
+    return `…[truncated earlier context]\n${head.slice(-budget)}\n${lastBlock}`;
   }
 
   private async ensureConnection(): Promise<WebSocket> {
@@ -549,19 +565,21 @@ class AOReach extends BaseLLM {
     signal?.addEventListener("abort", onAbort, { once: true });
 
     try {
-      socket.send(
-        JSON.stringify({
-          type: "session_overlay_register",
-          appId: APP_ID,
-          ttlSeconds: OVERLAY_TTL_SECONDS,
-          agents: this.packed.agents,
-          skills: this.packed.skills,
-          mcps: this.packed.mcps,
-          allowedAgentProviderIds: [],
-          allowedMcpProviderIds: [],
-          allowedSkillIds: [],
-        }),
-      );
+      const allow = overlayAllowlists(this.packed);
+      const register: Record<string, unknown> = {
+        type: "session_overlay_register",
+        appId: APP_ID,
+        ttlSeconds: OVERLAY_TTL_SECONDS,
+        agents: this.packed.agents,
+        skills: this.packed.skills,
+        mcps: this.packed.mcps,
+        allowedAgentProviderIds: [],
+        allowedMcpProviderIds: allow.allowedMcpProviderIds,
+      };
+      if (allow.allowedSkillIds.length > 0) {
+        register.allowedSkillIds = allow.allowedSkillIds;
+      }
+      socket.send(JSON.stringify(register));
 
       while (!state.aborted) {
         const frame = await this.nextFrame(state);

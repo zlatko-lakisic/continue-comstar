@@ -63,6 +63,18 @@ function textContent(text: string) {
   return { content: [{ type: "text", text }] };
 }
 
+export const FILESYSTEM_TOOL_RESULT_CHARS = 8000;
+
+function capToolText(
+  text: string,
+  maxChars = FILESYSTEM_TOOL_RESULT_CHARS,
+): string {
+  if (text.length <= maxChars) {
+    return text;
+  }
+  return `${text.slice(0, maxChars - 14)}\n… truncated`;
+}
+
 /**
  * The IDE hands us workspace folders as URIs (`file:///d%3A/Projects/app`),
  * which path.resolve cannot interpret. Convert those to local paths.
@@ -306,7 +318,7 @@ export class AoReachFilesystemMcp {
           const lines = entries.map((entry) =>
             entry.isDirectory() ? `${entry.name}/` : entry.name,
           );
-          return jsonResponse(id, textContent(lines.join("\n")));
+          return jsonResponse(id, textContent(capToolText(lines.join("\n"))));
         }
         case "read_file":
         case "read_text_file": {
@@ -320,7 +332,7 @@ export class AoReachFilesystemMcp {
               .slice(Math.max(0, lines.length - args.tail))
               .join("\n");
           }
-          return jsonResponse(id, textContent(text));
+          return jsonResponse(id, textContent(capToolText(text)));
         }
         case "write_file": {
           const target = this.resolveAllowed(String(args.path || ""), true);

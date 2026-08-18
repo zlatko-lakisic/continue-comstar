@@ -74,7 +74,7 @@ const ModelRoleSelector = ({
               className="bg-input border-command-border hover:bg-list-active hover:text-list-active-foreground text-description w-full justify-between rounded border px-2 py-1.5 underline hover:underline"
             >
               <span className="line-clamp-1" style={{ fontSize: fontSize(-1) }}>
-                Setup {displayName} model
+                Setup {displayName} agent
               </span>
             </ListboxButton>
           ) : (

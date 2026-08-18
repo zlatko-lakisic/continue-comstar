@@ -14,7 +14,11 @@ import { ChatMessage, LLMOptions } from "../../index.js";
 import AOReach from "./AOReach.js";
 import { AoReachFilesystemMcp } from "./aoReachFilesystemMcp.js";
 import { loadReachMtlsMaterial, assertMtlsUsesTls } from "./aoReachMtls.js";
-import { packAgentDefinition, packSessionOverlay } from "./aoReachOverlay.js";
+import {
+  overlayAllowlists,
+  packAgentDefinition,
+  packSessionOverlay,
+} from "./aoReachOverlay.js";
 
 function clientId(bare: string): string {
   return bare.startsWith("client.") ? bare : `client.${bare}`;
@@ -58,6 +62,20 @@ describe("AOReach overlay packer", () => {
     expect(packed.agentIds).toContain("client.code_assistant");
     expect(packed.mcps[0]?.id).toBe("client.filesystem_local");
     expect(clientId("code_assistant")).toBe("client.code_assistant");
+  });
+
+  it("pins packed MCP ids for overlay allowlists", () => {
+    const overlayRoot = path.resolve(
+      process.cwd(),
+      process.cwd().endsWith("core") ? "../overlays" : "overlays",
+    );
+    const packed = packSessionOverlay("comstar-code-review", {
+      overlayRoot,
+      includeFilesystemMcp: true,
+    });
+    const allow = overlayAllowlists(packed);
+    expect(allow.allowedMcpProviderIds).toContain("client.filesystem_local");
+    expect(allow.allowedSkillIds).toEqual([]);
   });
 
   it("packs a single agent YAML via agentDefinition", () => {
@@ -174,6 +192,25 @@ describe("AOReach in-process filesystem MCP", () => {
       }),
     });
     expect(read.body.toString("utf8")).toContain("hi");
+
+    const big = "x".repeat(9000);
+    fs.writeFileSync(path.join(root, "big.txt"), big);
+    const oversized = mcp.handleTunnelRequest({
+      method: "POST",
+      path: "/mcp",
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 4,
+        method: "tools/call",
+        params: {
+          name: "read_file",
+          arguments: { path: path.join(root, "big.txt") },
+        },
+      }),
+    });
+    const oversizedText = oversized.body.toString("utf8");
+    expect(oversizedText).toContain("… truncated");
+    expect(oversizedText.length).toBeLessThan(big.length);
 
     const escaped = mcp.handleTunnelRequest({
       method: "POST",

@@ -11,6 +11,8 @@ model: qwen3.6:27b
 selfcontained: false
 verbose: false
 allow_delegation: false
+provider_options:
+  num_ctx: 16384
 mcp_providers:
   - filesystem_local
 system_prompt: |

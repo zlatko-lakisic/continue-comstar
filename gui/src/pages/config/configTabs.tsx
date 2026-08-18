@@ -50,7 +50,7 @@ export const topTabSections: TabSection[] = [
     tabs: [
       {
         id: "models",
-        label: "Models",
+        label: "Agents",
         component: (
           <ConfigSection>
             <ModelsSection />

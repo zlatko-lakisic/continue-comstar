@@ -261,7 +261,7 @@ function ModelSelect() {
         </ListboxButton>
         <ListboxOptions className="min-w-[160px]">
           <div className="flex items-center justify-between px-1.5 py-1">
-            <span className="text-description text-xs font-medium">Models</span>
+            <span className="text-description text-xs font-medium">Agents</span>
             <div className="flex items-center gap-0.5">
               <Button
                 onClick={(e) => {
@@ -312,14 +312,14 @@ function ModelSelect() {
               >
                 <span className="text-description text-2xs flex flex-row items-center">
                   <PlusIcon className="mr-1.5 h-3.5 w-3.5" />
-                  Add Chat model
+                  Add Chat agent
                 </span>
               </ListboxOption>
 
               <Divider className="!my-0" />
               <div className="text-description flex items-center justify-start p-2">
                 <span className="block" style={{ fontSize: tinyFont }}>
-                  <code>{getMetaKeyLabel()}'</code> to toggle model
+                  <code>{getMetaKeyLabel()}'</code> to toggle agent
                 </span>
               </div>
             </>

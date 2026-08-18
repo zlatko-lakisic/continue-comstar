@@ -96,6 +96,13 @@ describe("AOReach engine-ws/1 protocol (mock AO)", () => {
     expect(
       engine.clientFrames.some((f) => f.type === "session_overlay_register"),
     ).toBe(true);
+    const register = engine.clientFrames.find(
+      (f) => f.type === "session_overlay_register",
+    );
+    expect(register?.allowedMcpProviderIds).toContain(
+      "client.filesystem_local",
+    );
+    expect(register?.allowedSkillIds).toBeUndefined();
     expect(
       engine.clientFrames.some((f) => f.type === "mcp_tunnel_response"),
     ).toBe(true);

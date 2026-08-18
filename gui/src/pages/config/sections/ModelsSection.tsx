@@ -72,9 +72,9 @@ export function ModelsSection() {
   return (
     <div className="space-y-4">
       <ConfigHeader
-        title="Models"
+        title="Agents"
         onAddClick={handleAddModel}
-        addButtonTooltip="Add model"
+        addButtonTooltip="Add agent"
       />
 
       <Card>
@@ -173,7 +173,7 @@ export function ModelsSection() {
         <Toggle
           isOpen={showAdditionalRoles}
           onToggle={() => setShowAdditionalRoles(!showAdditionalRoles)}
-          title="Additional model roles"
+          title="Additional agent roles"
           subtitle="Apply, Embed, Rerank"
         >
           <div className="flex flex-col">
