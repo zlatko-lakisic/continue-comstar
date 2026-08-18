@@ -1,5 +1,52 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="6" fill="#0d1117"/>
-  <text x="16" y="23" font-family="monospace" font-size="20" font-weight="700"
-        fill="#58a6ff" text-anchor="middle">C*</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <defs>
+    <radialGradient id="bgGrad" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#1a2235"/>
+      <stop offset="100%" stop-color="#080b0f"/>
+    </radialGradient>
+    <radialGradient id="starGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#58a6ff" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#58a6ff" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="starFill" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#c8d8f0"/>
+      <stop offset="50%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#a8c8e8"/>
+    </linearGradient>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="1.2" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Dark rounded background -->
+  <rect width="32" height="32" rx="7" fill="url(#bgGrad)"/>
+
+  <!-- Glow behind star -->
+  <circle cx="16" cy="16" r="9" fill="url(#starGlow)"/>
+
+  <!-- Circuit trace lines from cardinal points -->
+  <line x1="16" y1="3"  x2="16" y2="0.5" stroke="#58a6ff" stroke-width="0.6" stroke-opacity="0.4"/>
+  <line x1="29" y1="16" x2="31.5" y2="16" stroke="#58a6ff" stroke-width="0.6" stroke-opacity="0.4"/>
+  <line x1="16" y1="29" x2="16" y2="31.5" stroke="#58a6ff" stroke-width="0.6" stroke-opacity="0.4"/>
+  <line x1="3"  y1="16" x2="0.5" y2="16" stroke="#58a6ff" stroke-width="0.6" stroke-opacity="0.4"/>
+
+  <!-- Dot terminators -->
+  <circle cx="16"  cy="0.5"  r="0.7" fill="#58a6ff" opacity="0.5"/>
+  <circle cx="31.5" cy="16" r="0.7" fill="#58a6ff" opacity="0.5"/>
+  <circle cx="16"  cy="31.5" r="0.7" fill="#58a6ff" opacity="0.5"/>
+  <circle cx="0.5" cy="16"  r="0.7" fill="#58a6ff" opacity="0.5"/>
+
+  <!-- 8-pointed star (outer R=12, inner r=3.2, center 16,16) -->
+  <polygon
+    points="16,4 16.99,12.04 24.49,7.51 19.26,13.82 28,16 19.26,18.18 24.49,24.49 16.99,19.96 16,28 15.01,19.96 7.51,24.49 12.74,18.18 4,16 12.74,13.82 7.51,7.51 15.01,12.04"
+    fill="url(#starFill)"
+    filter="url(#glow)"
+  />
+
+  <!-- Center diamond for depth (matches original icon) -->
+  <polygon points="16,12.5 18.5,16 16,19.5 13.5,16" fill="#1a2a3a" opacity="0.6"/>
 </svg>

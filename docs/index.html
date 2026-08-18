@@ -8,34 +8,37 @@
   <meta property="og:title" content="continue-comstar" />
   <meta property="og:description" content="Continue × COMSTAR — AI coding assistant powered by your own orchestration daemon." />
   <meta property="og:url" content="https://zlatko-lakisic.github.io/continue-comstar/" />
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Orbitron:wght@500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg:         #080b0f;
-      --bg2:        #0d1117;
-      --surface:    #111820;
-      --surface2:   #161d27;
-      --border:     rgba(255,255,255,0.07);
-      --border-hi:  rgba(88,166,255,0.25);
-      --blue:       #58a6ff;
-      --blue-dim:   rgba(88,166,255,0.12);
-      --blue-glow:  rgba(88,166,255,0.4);
-      --green:      #3fb950;
-      --green-dim:  rgba(63,185,80,0.12);
-      --purple:     #bc8cff;
-      --text:       #e6edf3;
-      --text2:      #8b949e;
-      --text3:      #484f58;
-      --mono:       "JetBrains Mono", "Fira Code", monospace;
-      --sans:       "Inter", system-ui, sans-serif;
-      --radius-sm:  6px;
-      --radius:     12px;
-      --radius-lg:  20px;
-      --max-w:      1120px;
+      --bg:        #080b0f;
+      --bg2:       #0d1117;
+      --surface:   #111820;
+      --surface2:  #161d27;
+      --border:    rgba(255,255,255,0.07);
+      --border-hi: rgba(88,166,255,0.25);
+      --blue:      #58a6ff;
+      --blue-dim:  rgba(88,166,255,0.12);
+      --blue-glow: rgba(88,166,255,0.4);
+      --green:     #3fb950;
+      --green-dim: rgba(63,185,80,0.12);
+      --purple:    #bc8cff;
+      --text:      #e6edf3;
+      --text2:     #8b949e;
+      --text3:     #484f58;
+      --mono:      "JetBrains Mono", "Fira Code", monospace;
+      --sans:      "Inter", system-ui, sans-serif;
+      --grotesk:   "Space Grotesk", "Inter", system-ui, sans-serif;
+      --orbitron:  "Orbitron", monospace;
+      --radius-sm: 6px;
+      --radius:    12px;
+      --radius-lg: 20px;
+      --max-w:     1120px;
     }
 
     html { scroll-behavior: smooth; }
@@ -51,164 +54,78 @@
 
     body::before {
       content: '';
-      position: fixed;
-      inset: 0;
+      position: fixed; inset: 0;
       background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.035'/%3E%3C/svg%3E");
-      pointer-events: none;
-      z-index: 0;
-      opacity: 0.4;
+      pointer-events: none; z-index: 0; opacity: 0.4;
     }
 
     .container { max-width: var(--max-w); margin: 0 auto; padding: 0 1.5rem; }
 
+    /* NAV */
     nav {
       position: fixed; top: 0; left: 0; right: 0; z-index: 100;
       backdrop-filter: blur(20px) saturate(180%);
-      background: rgba(8,11,15,0.7);
+      background: rgba(8,11,15,0.75);
       border-bottom: 1px solid var(--border);
     }
     .nav-inner {
       max-width: var(--max-w); margin: 0 auto; padding: 0 1.5rem;
-      height: 56px;
-      display: flex; align-items: center; justify-content: space-between;
+      height: 56px; display: flex; align-items: center; justify-content: space-between;
     }
-    .nav-logo {
-      display: flex; align-items: center; gap: 0.6rem;
-      text-decoration: none; color: var(--text);
-      font-weight: 600; font-size: 0.95rem; letter-spacing: -0.01em;
+    .nav-logo { display: flex; align-items: center; gap: 0.7rem; text-decoration: none; }
+    .nav-logo .star-mark {
+      width: 26px; height: 26px; flex-shrink: 0;
+      filter: drop-shadow(0 0 4px rgba(88,166,255,0.5));
+      transition: filter 0.2s;
     }
-    .nav-logo .logo-mark {
-      width: 28px; height: 28px;
-      background: linear-gradient(135deg, var(--blue) 0%, var(--purple) 100%);
-      border-radius: 7px;
-      display: flex; align-items: center; justify-content: center;
-      font-family: var(--mono); font-size: 0.7rem; font-weight: 500;
-      color: #fff; letter-spacing: -0.03em;
-    }
-    .nav-links {
-      display: flex; align-items: center; gap: 0.25rem;
-      list-style: none;
-    }
-    .nav-links a {
-      color: var(--text2); text-decoration: none;
-      padding: 0.35rem 0.75rem; border-radius: var(--radius-sm);
-      font-size: 0.875rem; font-weight: 500;
-      transition: color 0.15s, background 0.15s;
-    }
-    .nav-links a:hover { color: var(--text); background: var(--border); }
+    .nav-logo:hover .star-mark { filter: drop-shadow(0 0 8px rgba(88,166,255,0.85)); }
+    .nav-logo .brand-text { display: flex; align-items: baseline; gap: 0; line-height: 1; }
+    .nav-logo .brand-continue { font-family: var(--sans); font-size: 0.8rem; font-weight: 400; color: var(--text2); }
+    .nav-logo .brand-dash    { font-size: 0.8rem; color: var(--text3); margin: 0 1px; }
+    .nav-logo .brand-comstar { font-family: var(--orbitron); font-size: 0.75rem; font-weight: 600; color: var(--text); letter-spacing: 0.05em; text-transform: uppercase; }
+    .nav-links { display: flex; align-items: center; gap: 0.25rem; list-style: none; }
+    .nav-links a { color: var(--text2); text-decoration: none; padding: 0.35rem 0.75rem; border-radius: var(--radius-sm); font-size: 0.875rem; font-weight: 500; transition: color 0.15s, background 0.15s; }
+    .nav-links a:hover { color: var(--text); background: rgba(255,255,255,0.04); }
     .nav-cta { display: flex; align-items: center; gap: 0.5rem; }
-    .btn-ghost {
-      padding: 0.4rem 1rem; border-radius: var(--radius-sm);
-      font-size: 0.875rem; font-weight: 500; font-family: var(--sans);
-      background: transparent; border: 1px solid var(--border);
-      color: var(--text2); cursor: pointer; text-decoration: none;
-      transition: border-color 0.15s, color 0.15s;
-      display: inline-flex; align-items: center; gap: 0.4rem;
-    }
+    .btn-ghost { padding: 0.4rem 1rem; border-radius: var(--radius-sm); font-size: 0.875rem; font-weight: 500; font-family: var(--sans); background: transparent; border: 1px solid var(--border); color: var(--text2); cursor: pointer; text-decoration: none; transition: border-color 0.15s, color 0.15s; display: inline-flex; align-items: center; gap: 0.4rem; }
     .btn-ghost:hover { border-color: var(--border-hi); color: var(--text); }
-    .btn-primary {
-      padding: 0.4rem 1rem; border-radius: var(--radius-sm);
-      font-size: 0.875rem; font-weight: 500; font-family: var(--sans);
-      background: var(--blue); border: none;
-      color: #080b0f; cursor: pointer; text-decoration: none;
-      transition: opacity 0.15s, box-shadow 0.15s;
-    }
+    .btn-primary { padding: 0.4rem 1rem; border-radius: var(--radius-sm); font-size: 0.875rem; font-weight: 500; font-family: var(--sans); background: var(--blue); border: none; color: #080b0f; cursor: pointer; text-decoration: none; transition: opacity 0.15s, box-shadow 0.15s; }
     .btn-primary:hover { opacity: 0.88; box-shadow: 0 0 20px var(--blue-glow); }
 
-    .hero {
-      min-height: 100vh;
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      text-align: center;
-      padding: 8rem 1.5rem 5rem;
-      position: relative;
+    /* HERO */
+    .hero { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 8rem 1.5rem 5rem; position: relative; }
+    .hero-glow { position: absolute; top: 20%; left: 50%; transform: translate(-50%, -50%); width: 800px; height: 500px; background: radial-gradient(ellipse at center, rgba(88,166,255,0.08) 0%, transparent 70%); pointer-events: none; }
+    .hero-star { width: 64px; height: 64px; margin-bottom: 2rem; filter: drop-shadow(0 0 12px rgba(88,166,255,0.5)); animation: starPulse 4s ease-in-out infinite; }
+    @keyframes starPulse {
+      0%,100% { filter: drop-shadow(0 0 12px rgba(88,166,255,0.5)); }
+      50%      { filter: drop-shadow(0 0 24px rgba(88,166,255,0.85)) drop-shadow(0 0 48px rgba(188,140,255,0.3)); }
     }
-    .hero-glow {
-      position: absolute;
-      top: 20%; left: 50%; transform: translate(-50%, -50%);
-      width: 800px; height: 500px;
-      background: radial-gradient(ellipse at center, rgba(88,166,255,0.08) 0%, transparent 70%);
-      pointer-events: none;
-    }
-    .hero-badge {
-      display: inline-flex; align-items: center; gap: 0.5rem;
-      padding: 0.3rem 0.9rem; border-radius: 100px;
-      border: 1px solid var(--border-hi);
-      background: var(--blue-dim);
-      font-size: 0.78rem; font-weight: 500; color: var(--blue);
-      letter-spacing: 0.02em; text-transform: uppercase;
-      margin-bottom: 1.75rem;
-    }
-    .hero-badge .dot {
-      width: 6px; height: 6px; border-radius: 50%;
-      background: var(--green); box-shadow: 0 0 6px var(--green);
-      animation: pulse 2s ease-in-out infinite;
-    }
-    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
-
-    .hero h1 {
-      font-size: clamp(2.5rem, 6vw, 4.5rem);
-      font-weight: 700; letter-spacing: -0.04em; line-height: 1.05;
-      margin-bottom: 1.25rem;
-    }
-    .hero h1 .word-comstar {
-      background: linear-gradient(135deg, var(--blue) 0%, var(--purple) 100%);
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-    .hero h1 .word-dash { color: var(--text3); margin: 0 0.1em; }
-    .hero-sub {
-      font-size: clamp(1rem, 2vw, 1.2rem); color: var(--text2);
-      max-width: 520px; line-height: 1.65; margin-bottom: 2.5rem;
-    }
+    .hero-badge { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.3rem 0.9rem; border-radius: 100px; border: 1px solid var(--border-hi); background: var(--blue-dim); font-size: 0.78rem; font-weight: 500; color: var(--blue); letter-spacing: 0.02em; text-transform: uppercase; margin-bottom: 1.5rem; }
+    .hero-badge .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); box-shadow: 0 0 6px var(--green); animation: pulse 2s ease-in-out infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+    .hero h1 { font-family: var(--grotesk); font-size: clamp(2.5rem, 6vw, 4.5rem); font-weight: 700; letter-spacing: -0.04em; line-height: 1.05; margin-bottom: 0.5rem; }
+    .hero h1 .word-continue { color: var(--text2); font-weight: 400; }
+    .hero h1 .word-dash { color: var(--text3); }
+    .hero h1 .word-comstar { font-family: var(--orbitron); font-weight: 700; letter-spacing: 0.04em; background: linear-gradient(135deg, #7ec8ff 0%, var(--blue) 40%, var(--purple) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .hero-tagline { font-family: var(--mono); font-size: 0.78rem; color: var(--text3); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 1.5rem; }
+    .hero-tagline span { color: var(--blue); }
+    .hero-sub { font-size: clamp(1rem, 2vw, 1.15rem); color: var(--text2); max-width: 500px; line-height: 1.7; margin-bottom: 2.5rem; }
     .hero-sub strong { color: var(--text); font-weight: 500; }
-    .hero-actions {
-      display: flex; align-items: center; justify-content: center;
-      gap: 0.75rem; flex-wrap: wrap; margin-bottom: 4rem;
-    }
-    .btn-hero-primary {
-      display: inline-flex; align-items: center; gap: 0.5rem;
-      padding: 0.7rem 1.5rem; border-radius: var(--radius-sm);
-      font-size: 0.95rem; font-weight: 600; font-family: var(--sans);
-      background: var(--blue); border: none; color: #080b0f;
-      cursor: pointer; text-decoration: none;
-      transition: opacity 0.15s, box-shadow 0.15s;
-    }
+    .hero-actions { display: flex; align-items: center; justify-content: center; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 4rem; }
+    .btn-hero-primary { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.7rem 1.5rem; border-radius: var(--radius-sm); font-size: 0.95rem; font-weight: 600; font-family: var(--sans); background: var(--blue); border: none; color: #080b0f; cursor: pointer; text-decoration: none; transition: opacity 0.15s, box-shadow 0.15s; }
     .btn-hero-primary:hover { opacity: 0.88; box-shadow: 0 0 30px var(--blue-glow); }
-    .btn-hero-ghost {
-      display: inline-flex; align-items: center; gap: 0.5rem;
-      padding: 0.7rem 1.5rem; border-radius: var(--radius-sm);
-      font-size: 0.95rem; font-weight: 500; font-family: var(--sans);
-      background: transparent; border: 1px solid var(--border);
-      color: var(--text2); cursor: pointer; text-decoration: none;
-      transition: border-color 0.15s, color 0.15s, background 0.15s;
-    }
+    .btn-hero-ghost { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.7rem 1.5rem; border-radius: var(--radius-sm); font-size: 0.95rem; font-weight: 500; font-family: var(--sans); background: transparent; border: 1px solid var(--border); color: var(--text2); cursor: pointer; text-decoration: none; transition: border-color 0.15s, color 0.15s, background 0.15s; }
     .btn-hero-ghost:hover { border-color: var(--border-hi); color: var(--text); background: rgba(255,255,255,0.03); }
 
-    .hero-terminal {
-      width: 100%; max-width: 680px;
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); overflow: hidden;
-      box-shadow: 0 24px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.03);
-      text-align: left;
-    }
-    .terminal-bar {
-      display: flex; align-items: center; gap: 0.5rem;
-      padding: 0.85rem 1.25rem;
-      background: var(--surface2); border-bottom: 1px solid var(--border);
-    }
+    /* TERMINAL CARD */
+    .hero-terminal { width: 100%; max-width: 680px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; box-shadow: 0 24px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.03); text-align: left; }
+    .terminal-bar { display: flex; align-items: center; gap: 0.5rem; padding: 0.85rem 1.25rem; background: var(--surface2); border-bottom: 1px solid var(--border); }
     .terminal-dot { width: 12px; height: 12px; border-radius: 50%; }
     .terminal-dot.red    { background: #ff5f57; }
     .terminal-dot.yellow { background: #ffbd2e; }
     .terminal-dot.green  { background: #28c840; }
-    .terminal-title {
-      margin: 0 auto; transform: translateX(18px);
-      font-size: 0.78rem; color: var(--text3); font-family: var(--mono);
-    }
-    .terminal-body {
-      padding: 1.25rem 1.5rem;
-      font-family: var(--mono); font-size: 0.82rem; line-height: 1.8;
-    }
+    .terminal-title { margin: 0 auto; transform: translateX(18px); font-size: 0.78rem; color: var(--text3); font-family: var(--mono); }
+    .terminal-body { padding: 1.25rem 1.5rem; font-family: var(--mono); font-size: 0.82rem; line-height: 1.8; }
     .t-comment { color: var(--text3); }
     .t-key     { color: var(--blue); }
     .t-val     { color: var(--green); }
@@ -216,199 +133,105 @@
     .t-num     { color: var(--purple); }
     .t-out     { color: var(--text2); }
     .t-line    { display: block; }
-    .t-cursor  {
-      display: inline-block; width: 2px; height: 1em;
-      background: var(--blue); vertical-align: text-bottom;
-      animation: blink 1s step-end infinite;
-    }
+    .t-cursor  { display: inline-block; width: 2px; height: 1em; background: var(--blue); vertical-align: text-bottom; animation: blink 1s step-end infinite; }
     @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
 
+    /* SECTIONS */
     section { padding: 6rem 0; position: relative; }
-    .section-label {
-      display: inline-flex; align-items: center; gap: 0.4rem;
-      font-size: 0.72rem; font-weight: 600;
-      letter-spacing: 0.1em; text-transform: uppercase;
-      color: var(--blue); margin-bottom: 1rem;
-    }
+    .section-label { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--blue); margin-bottom: 1rem; }
     .section-label::before { content: ''; width: 14px; height: 1px; background: var(--blue); }
-    h2 {
-      font-size: clamp(1.75rem, 3.5vw, 2.5rem);
-      font-weight: 700; letter-spacing: -0.03em;
-      color: var(--text); margin-bottom: 1rem;
-    }
+    h2 { font-family: var(--grotesk); font-size: clamp(1.75rem, 3.5vw, 2.5rem); font-weight: 700; letter-spacing: -0.03em; color: var(--text); margin-bottom: 1rem; }
     .section-sub { font-size: 1.05rem; color: var(--text2); max-width: 520px; line-height: 1.65; }
 
+    /* FLOW */
     .flow-section { background: var(--bg2); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
     .flow-section .container { text-align: center; }
     .flow-section .section-label { justify-content: center; }
     .flow-section .section-label::before { display: none; }
     .flow-section .section-sub { margin: 0 auto 3.5rem; }
-    .flow-diagram {
-      display: grid; grid-template-columns: 1fr 48px 1fr 48px 1fr;
-      align-items: center; max-width: 860px; margin: 0 auto;
-    }
-    .flow-node {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius); padding: 1.75rem 1.5rem; text-align: left;
-      transition: border-color 0.2s, box-shadow 0.2s;
-    }
+    .flow-diagram { display: grid; grid-template-columns: 1fr 48px 1fr 48px 1fr; align-items: center; max-width: 860px; margin: 0 auto; }
+    .flow-node { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.75rem 1.5rem; text-align: left; transition: border-color 0.2s, box-shadow 0.2s; }
     .flow-node:hover { border-color: var(--border-hi); box-shadow: 0 0 30px var(--blue-dim); }
-    .flow-node-num { font-size: 0.7rem; font-weight: 600; font-family: var(--mono); color: var(--blue); letter-spacing: 0.05em; margin-bottom: 0.6rem; }
-    .flow-node-title { font-size: 1rem; font-weight: 600; color: var(--text); margin-bottom: 0.4rem; }
-    .flow-node-sub { font-size: 0.82rem; color: var(--text2); line-height: 1.55; }
-    .flow-node-tag {
-      display: inline-flex; margin-top: 0.85rem;
-      padding: 0.2rem 0.55rem; border-radius: 4px;
-      font-family: var(--mono); font-size: 0.7rem;
-      background: var(--blue-dim); color: var(--blue);
-    }
+    .flow-node-num   { font-size: 0.7rem; font-weight: 600; font-family: var(--mono); color: var(--blue); letter-spacing: 0.05em; margin-bottom: 0.6rem; }
+    .flow-node-title { font-size: 1rem; font-weight: 600; font-family: var(--grotesk); color: var(--text); margin-bottom: 0.4rem; }
+    .flow-node-sub   { font-size: 0.82rem; color: var(--text2); line-height: 1.55; }
+    .flow-node-tag   { display: inline-flex; margin-top: 0.85rem; padding: 0.2rem 0.55rem; border-radius: 4px; font-family: var(--mono); font-size: 0.7rem; background: var(--blue-dim); color: var(--blue); }
     .flow-arrow { display: flex; align-items: center; justify-content: center; color: var(--text3); }
     .flow-arrow svg { width: 28px; height: 28px; }
     .flow-quote { margin-top: 2.5rem; font-size: 0.9rem; color: var(--text3); font-style: italic; font-family: var(--mono); }
     .flow-quote span { color: var(--text2); }
 
-    .bento-grid {
-      display: grid; grid-template-columns: repeat(12, 1fr);
-      gap: 1rem; margin-top: 3rem;
-    }
-    .bento-card {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius); padding: 1.75rem;
-      position: relative; overflow: hidden;
-      transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
-    }
+    /* BENTO */
+    .bento-grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 1rem; margin-top: 3rem; }
+    .bento-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.75rem; position: relative; overflow: hidden; transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s; }
     .bento-card:hover { border-color: var(--border-hi); box-shadow: 0 0 40px rgba(88,166,255,0.07); transform: translateY(-1px); }
-    .bento-card::before {
-      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
-      background: linear-gradient(90deg, transparent, var(--blue-dim), transparent);
-      opacity: 0; transition: opacity 0.2s;
-    }
+    .bento-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, var(--blue-dim), transparent); opacity: 0; transition: opacity 0.2s; }
     .bento-card:hover::before { opacity: 1; }
-    .bc-icon {
-      width: 40px; height: 40px; border-radius: 10px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 1.2rem; margin-bottom: 1.1rem;
-    }
+    .bc-icon  { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; margin-bottom: 1.1rem; }
     .bc-icon.blue   { background: var(--blue-dim); }
     .bc-icon.green  { background: var(--green-dim); }
     .bc-icon.purple { background: rgba(188,140,255,0.12); }
     .bc-icon.amber  { background: rgba(255,189,46,0.1); }
-    .bc-title { font-size: 1rem; font-weight: 600; color: var(--text); margin-bottom: 0.4rem; letter-spacing: -0.01em; }
+    .bc-title { font-family: var(--grotesk); font-size: 1rem; font-weight: 600; color: var(--text); margin-bottom: 0.4rem; letter-spacing: -0.01em; }
     .bc-body  { font-size: 0.875rem; color: var(--text2); line-height: 1.6; }
     .bc-1 { grid-column: span 4; }
     .bc-2 { grid-column: span 4; }
     .bc-3 { grid-column: span 4; }
     .bc-4 { grid-column: span 6; }
     .bc-5 { grid-column: span 6; }
-    .bc-code {
-      margin-top: 1rem; padding: 0.75rem 1rem;
-      background: var(--bg); border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      font-family: var(--mono); font-size: 0.75rem;
-      color: var(--text2); line-height: 1.7;
-    }
+    .bc-code { margin-top: 1rem; padding: 0.75rem 1rem; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: var(--mono); font-size: 0.75rem; color: var(--text2); line-height: 1.7; }
     .bc-code .ck { color: var(--blue); }
     .bc-code .cv { color: var(--green); }
     .bc-code .cs { color: #a5d6ff; }
 
+    /* INSTALL */
     .install-section { background: var(--bg2); border-top: 1px solid var(--border); }
-    .install-layout {
-      display: grid; grid-template-columns: 1fr 1.4fr;
-      gap: 5rem; align-items: start; margin-top: 3.5rem;
-    }
+    .install-layout { display: grid; grid-template-columns: 1fr 1.4fr; gap: 5rem; align-items: start; margin-top: 3.5rem; }
     .install-steps { margin-top: 2rem; display: flex; flex-direction: column; gap: 1.5rem; }
     .install-step  { display: flex; gap: 1rem; align-items: flex-start; }
-    .step-num {
-      flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%;
-      background: var(--blue-dim); border: 1px solid var(--border-hi);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 0.75rem; font-weight: 700; color: var(--blue);
-      font-family: var(--mono); margin-top: 0.1rem;
-    }
-    .step-title { font-size: 0.9rem; font-weight: 600; color: var(--text); margin-bottom: 0.2rem; }
+    .step-num  { flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%; background: var(--blue-dim); border: 1px solid var(--border-hi); display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; color: var(--blue); font-family: var(--mono); margin-top: 0.1rem; }
+    .step-title { font-family: var(--grotesk); font-size: 0.9rem; font-weight: 600; color: var(--text); margin-bottom: 0.2rem; }
     .step-desc  { font-size: 0.83rem; color: var(--text2); line-height: 1.5; }
-    .code-panel {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); overflow: hidden;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.4);
-    }
-    .tab-bar {
-      display: flex; background: var(--surface2);
-      border-bottom: 1px solid var(--border); padding: 0 0.25rem;
-    }
-    .tab-btn {
-      padding: 0.75rem 1.1rem; font-size: 0.8rem; font-weight: 500;
-      font-family: var(--sans); color: var(--text3);
-      background: none; border: none; cursor: pointer;
-      border-bottom: 2px solid transparent;
-      transition: color 0.15s, border-color 0.15s;
-    }
+    .code-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.4); }
+    .tab-bar { display: flex; background: var(--surface2); border-bottom: 1px solid var(--border); padding: 0 0.25rem; }
+    .tab-btn { padding: 0.75rem 1.1rem; font-size: 0.8rem; font-weight: 500; font-family: var(--sans); color: var(--text3); background: none; border: none; cursor: pointer; border-bottom: 2px solid transparent; transition: color 0.15s, border-color 0.15s; }
     .tab-btn.active { color: var(--blue); border-bottom-color: var(--blue); }
     .tab-btn:hover:not(.active) { color: var(--text2); }
     .tab-panel { display: none; }
     .tab-panel.active { display: block; }
     .code-block-wrap { position: relative; }
-    .code-block {
-      padding: 1.5rem; font-family: var(--mono); font-size: 0.8rem;
-      line-height: 1.8; color: var(--text2); overflow-x: auto;
-      margin: 0; background: none; border: none;
-    }
+    .code-block { padding: 1.5rem; font-family: var(--mono); font-size: 0.8rem; line-height: 1.8; color: var(--text2); overflow-x: auto; margin: 0; background: none; border: none; }
     .code-block .ck { color: var(--blue); }
     .code-block .cv { color: var(--green); }
     .code-block .cs { color: #a5d6ff; }
     .code-block .cc { color: var(--text3); }
     .code-block .cd { color: var(--text); }
     .code-block .cp { color: var(--purple); }
-    .copy-btn {
-      position: absolute; top: 0.75rem; right: 0.75rem;
-      padding: 0.3rem 0.65rem; border-radius: var(--radius-sm);
-      font-size: 0.72rem; font-weight: 500; font-family: var(--sans);
-      background: var(--surface2); border: 1px solid var(--border);
-      color: var(--text3); cursor: pointer;
-      transition: color 0.15s, border-color 0.15s;
-    }
+    .copy-btn { position: absolute; top: 0.75rem; right: 0.75rem; padding: 0.3rem 0.65rem; border-radius: var(--radius-sm); font-size: 0.72rem; font-weight: 500; font-family: var(--sans); background: var(--surface2); border: 1px solid var(--border); color: var(--text3); cursor: pointer; transition: color 0.15s, border-color 0.15s; }
     .copy-btn:hover { color: var(--text); border-color: var(--border-hi); }
 
+    /* OVERLAYS */
     .overlays-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 3rem; }
-    .overlay-card {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius); padding: 2rem;
-      transition: border-color 0.2s;
-    }
+    .overlay-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 2rem; transition: border-color 0.2s; }
     .overlay-card:hover { border-color: var(--border-hi); }
-    .overlay-pill {
-      display: inline-flex; align-items: center; gap: 0.35rem;
-      padding: 0.2rem 0.65rem; border-radius: 4px;
-      font-family: var(--mono); font-size: 0.72rem; font-weight: 500;
-      background: var(--blue-dim); color: var(--blue);
-      border: 1px solid rgba(88,166,255,0.2); margin-bottom: 1rem;
-    }
-    .overlay-title { font-size: 1.15rem; font-weight: 700; color: var(--text); letter-spacing: -0.02em; margin-bottom: 0.5rem; }
+    .overlay-pill { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.2rem 0.65rem; border-radius: 4px; font-family: var(--mono); font-size: 0.72rem; font-weight: 500; background: var(--blue-dim); color: var(--blue); border: 1px solid rgba(88,166,255,0.2); margin-bottom: 1rem; }
+    .overlay-title { font-family: var(--grotesk); font-size: 1.15rem; font-weight: 700; color: var(--text); letter-spacing: -0.02em; margin-bottom: 0.5rem; }
     .overlay-desc  { font-size: 0.875rem; color: var(--text2); line-height: 1.6; margin-bottom: 1.25rem; }
     .overlay-tags  { display: flex; gap: 0.4rem; flex-wrap: wrap; }
-    .tag {
-      padding: 0.2rem 0.55rem; border-radius: 4px;
-      font-size: 0.72rem; font-weight: 500;
-      background: var(--surface2); color: var(--text3); border: 1px solid var(--border);
-    }
-    .overlay-glow-code {
-      display: block; margin-top: 1.5rem; padding: 0.65rem 0.9rem;
-      background: var(--bg); border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      font-family: var(--mono); font-size: 0.75rem; color: var(--text2);
-    }
+    .tag { padding: 0.2rem 0.55rem; border-radius: 4px; font-size: 0.72rem; font-weight: 500; background: var(--surface2); color: var(--text3); border: 1px solid var(--border); }
+    .overlay-glow-code { display: block; margin-top: 1.5rem; padding: 0.65rem 0.9rem; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: var(--mono); font-size: 0.75rem; color: var(--text2); }
     .overlay-glow-code .ck { color: var(--blue); }
     .overlay-glow-code .cs { color: #a5d6ff; }
 
+    /* FOOTER */
     footer { background: var(--bg2); border-top: 1px solid var(--border); padding: 3rem 0; }
     .footer-inner { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1.5rem; }
-    .footer-brand { display: flex; align-items: center; gap: 0.6rem; text-decoration: none; color: var(--text); font-weight: 600; font-size: 0.9rem; }
-    .footer-brand .logo-mark {
-      width: 24px; height: 24px;
-      background: linear-gradient(135deg, var(--blue), var(--purple));
-      border-radius: 6px; display: flex; align-items: center; justify-content: center;
-      font-family: var(--mono); font-size: 0.62rem; color: #fff;
-    }
+    .footer-brand { display: flex; align-items: center; gap: 0.65rem; text-decoration: none; }
+    .footer-brand .star-mark { width: 20px; height: 20px; filter: drop-shadow(0 0 3px rgba(88,166,255,0.4)); }
+    .footer-brand .brand-text    { display: flex; align-items: baseline; gap: 0; }
+    .footer-brand .brand-continue { font-family: var(--sans); font-size: 0.78rem; font-weight: 400; color: var(--text3); }
+    .footer-brand .brand-dash    { font-size: 0.78rem; color: var(--text3); margin: 0 1px; }
+    .footer-brand .brand-comstar { font-family: var(--orbitron); font-size: 0.7rem; font-weight: 600; color: var(--text2); letter-spacing: 0.04em; text-transform: uppercase; }
     .footer-meta { font-size: 0.8rem; color: var(--text3); line-height: 1.6; }
     .footer-meta a { color: var(--text2); text-decoration: none; }
     .footer-meta a:hover { color: var(--blue); }
@@ -417,6 +240,7 @@
     .footer-links a:hover { color: var(--text); }
     .divider { border: none; border-top: 1px solid var(--border); margin: 0; }
 
+    /* RESPONSIVE */
     @media (max-width: 900px) {
       .flow-diagram { grid-template-columns: 1fr; gap: 0.5rem; }
       .flow-arrow { transform: rotate(90deg); }
@@ -428,18 +252,39 @@
     }
     @media (max-width: 600px) {
       .bento-grid { grid-template-columns: 1fr; }
-      .hero h1 { font-size: 2.2rem; }
+      .hero h1 { font-size: 2rem; }
       .footer-inner { flex-direction: column; align-items: flex-start; }
     }
   </style>
 </head>
 <body>
 
+<!-- Shared SVG gradient definitions -->
+<svg width="0" height="0" style="position:absolute" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="starGradBP" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#7ec8ff"/>
+      <stop offset="50%" stop-color="#58a6ff"/>
+      <stop offset="100%" stop-color="#bc8cff"/>
+    </linearGradient>
+    <linearGradient id="starGradHero" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#c0e0ff"/>
+      <stop offset="40%" stop-color="#58a6ff"/>
+      <stop offset="100%" stop-color="#bc8cff"/>
+    </linearGradient>
+  </defs>
+</svg>
+
+<!-- NAV -->
 <nav>
   <div class="nav-inner">
     <a class="nav-logo" href="#">
-      <div class="logo-mark">C*</div>
-      continue-comstar
+      <svg class="star-mark" viewBox="0 0 28 28" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <polygon points="14,2.5 15.15,11.23 22.13,5.87 16.77,12.85 25.5,14 16.77,15.15 22.13,22.13 15.15,16.77 14,25.5 12.85,16.77 5.87,22.13 11.23,15.15 2.5,14 11.23,12.85 5.87,5.87 12.85,11.23" fill="url(#starGradBP)"/>
+      </svg>
+      <div class="brand-text">
+        <span class="brand-continue">continue</span><span class="brand-dash">-</span><span class="brand-comstar">comstar</span>
+      </div>
     </a>
     <ul class="nav-links">
       <li><a href="#how-it-works">How it works</a></li>
@@ -457,19 +302,53 @@
   </div>
 </nav>
 
+<!-- HERO -->
 <header class="hero">
   <div class="hero-glow"></div>
-  <div class="hero-badge">
-    <span class="dot"></span>
-    AO Reach v0.12.0 · Apache-2.0
-  </div>
+
+  <!-- 64px animated star -->
+  <svg class="hero-star" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <defs>
+      <filter id="heroGlow" x="-50%" y="-50%" width="200%" height="200%">
+        <feGaussianBlur stdDeviation="2.5" result="blur"/>
+        <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+    </defs>
+    <circle cx="32" cy="32" r="28" fill="none" stroke="rgba(88,166,255,0.08)" stroke-width="1"/>
+    <!-- Cardinal circuit traces -->
+    <line x1="32" y1="6"  x2="32" y2="1"  stroke="#58a6ff" stroke-width="0.8" stroke-opacity="0.5"/>
+    <line x1="58" y1="32" x2="63" y2="32" stroke="#58a6ff" stroke-width="0.8" stroke-opacity="0.5"/>
+    <line x1="32" y1="58" x2="32" y2="63" stroke="#58a6ff" stroke-width="0.8" stroke-opacity="0.5"/>
+    <line x1="6"  y1="32" x2="1"  y2="32" stroke="#58a6ff" stroke-width="0.8" stroke-opacity="0.5"/>
+    <!-- Diagonal traces -->
+    <line x1="52.4" y1="11.6" x2="55.3" y2="8.7"  stroke="#58a6ff" stroke-width="0.6" stroke-opacity="0.3"/>
+    <line x1="52.4" y1="52.4" x2="55.3" y2="55.3" stroke="#58a6ff" stroke-width="0.6" stroke-opacity="0.3"/>
+    <line x1="11.6" y1="52.4" x2="8.7"  y2="55.3" stroke="#58a6ff" stroke-width="0.6" stroke-opacity="0.3"/>
+    <line x1="11.6" y1="11.6" x2="8.7"  y2="8.7"  stroke="#58a6ff" stroke-width="0.6" stroke-opacity="0.3"/>
+    <!-- Dot terminators -->
+    <circle cx="32" cy="1"  r="1.2" fill="#58a6ff" opacity="0.6"/>
+    <circle cx="63" cy="32" r="1.2" fill="#58a6ff" opacity="0.6"/>
+    <circle cx="32" cy="63" r="1.2" fill="#58a6ff" opacity="0.6"/>
+    <circle cx="1"  cy="32" r="1.2" fill="#58a6ff" opacity="0.6"/>
+    <!-- 8-pointed star -->
+    <polygon points="32,6 34.2,25.0 50.1,13.9 38.3,28.7 57,32 38.3,35.3 50.1,50.1 34.2,39.0 32,58 29.8,39.0 13.9,50.1 25.7,35.3 7,32 25.7,28.7 13.9,13.9 29.8,25.0" fill="url(#starGradHero)" filter="url(#heroGlow)"/>
+    <!-- Center diamond for depth -->
+    <polygon points="32,26 37,32 32,38 27,32" fill="#0d1a2a" opacity="0.55"/>
+  </svg>
+
+  <div class="hero-badge"><span class="dot"></span>AO Reach v0.12.0 · Apache-2.0</div>
+
   <h1>
     <span class="word-continue">continue</span><span class="word-dash">-</span><span class="word-comstar">comstar</span>
   </h1>
+
+  <p class="hero-tagline">Editor I/O · <span>AO Reach</span> · Agentic Orchestration</p>
+
   <p class="hero-sub">
     A <strong>Continue</strong> fork that routes every AI inference request through your own
     <strong>COMSTAR agentic-orchestration</strong> daemon. No cloud accounts. No code leaving your network.
   </p>
+
   <div class="hero-actions">
     <a class="btn-hero-primary" href="#install">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -480,11 +359,10 @@
       View on GitHub
     </a>
   </div>
+
   <div class="hero-terminal">
     <div class="terminal-bar">
-      <span class="terminal-dot red"></span>
-      <span class="terminal-dot yellow"></span>
-      <span class="terminal-dot green"></span>
+      <span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span>
       <span class="terminal-title">config.yaml — continue-comstar</span>
     </div>
     <div class="terminal-body">
@@ -506,6 +384,7 @@
 
 <hr class="divider" />
 
+<!-- HOW IT WORKS -->
 <section id="how-it-works" class="flow-section">
   <div class="container">
     <div class="section-label">Architecture</div>
@@ -518,18 +397,14 @@
         <div class="flow-node-sub">Continue captures editor context — cursor position, open files, diagnostics — and wraps it as an AO Reach request.</div>
         <span class="flow-node-tag">Continue UI</span>
       </div>
-      <div class="flow-arrow">
-        <svg viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 14h16M16 8l6 6-6 6"/></svg>
-      </div>
+      <div class="flow-arrow"><svg viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 14h16M16 8l6 6-6 6"/></svg></div>
       <div class="flow-node">
         <div class="flow-node-num">02</div>
         <div class="flow-node-title">AO Reach v0.12.0</div>
         <div class="flow-node-sub">WebSocket protocol with optional mTLS. Streams thinking and assistant chunks back as they arrive. Zero buffering.</div>
         <span class="flow-node-tag">WebSocket · mTLS</span>
       </div>
-      <div class="flow-arrow">
-        <svg viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 14h16M16 8l6 6-6 6"/></svg>
-      </div>
+      <div class="flow-arrow"><svg viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 14h16M16 8l6 6-6 6"/></svg></div>
       <div class="flow-node">
         <div class="flow-node-num">03</div>
         <div class="flow-node-title">COMSTAR Daemon</div>
@@ -541,6 +416,7 @@
   </div>
 </section>
 
+<!-- FEATURES -->
 <section id="features">
   <div class="container">
     <div class="section-label">Features</div>
@@ -566,24 +442,19 @@
         <div class="bc-icon amber">📦</div>
         <div class="bc-title">Overlay Packs — Editable on Disk</div>
         <div class="bc-body">Agent definitions live as YAML files in <code style="font-family:var(--mono);font-size:0.78em;color:var(--blue)">overlays/</code>. Edit personality, model routing, and tool access without touching extension code.</div>
-        <div class="bc-code">
-          <span class="ck">sessionOverlay</span>: <span class="cs">"comstar-code"</span><br>
-          <span class="ck">sessionOverlay</span>: <span class="cs">"comstar-code-review"</span>
-        </div>
+        <div class="bc-code"><span class="ck">sessionOverlay</span>: <span class="cs">"comstar-code"</span><br><span class="ck">sessionOverlay</span>: <span class="cs">"comstar-code-review"</span></div>
       </div>
       <div class="bento-card bc-5">
         <div class="bc-icon blue">🛠</div>
         <div class="bc-title">MCP Tool Integration</div>
         <div class="bc-body">In-process filesystem tunneling and external MCP servers wired directly to the daemon. The extension doesn't manage tools — the orchestration layer does.</div>
-        <div class="bc-code">
-          <span class="ck">AGENTIC_SERVE_MCP_TUNNEL</span>=<span class="cv">1</span><br>
-          <span class="ck">AGENTIC_SERVE_SESSION_OVERLAY</span>=<span class="cv">1</span>
-        </div>
+        <div class="bc-code"><span class="ck">AGENTIC_SERVE_MCP_TUNNEL</span>=<span class="cv">1</span><br><span class="ck">AGENTIC_SERVE_SESSION_OVERLAY</span>=<span class="cv">1</span></div>
       </div>
     </div>
   </div>
 </section>
 
+<!-- INSTALL -->
 <section id="install" class="install-section">
   <div class="container">
     <div class="install-layout">
@@ -620,7 +491,7 @@
         <div class="code-panel">
           <div class="tab-bar" role="tablist">
             <button class="tab-btn active" data-tab="clone" role="tab" aria-selected="true">Clone</button>
-            <button class="tab-btn" data-tab="build" role="tab" aria-selected="false">Build</button>
+            <button class="tab-btn" data-tab="build"  role="tab" aria-selected="false">Build</button>
             <button class="tab-btn" data-tab="config" role="tab" aria-selected="false">Configure</button>
           </div>
           <div class="tab-panel active" data-panel="clone">
@@ -669,6 +540,7 @@
   </div>
 </section>
 
+<!-- OVERLAYS -->
 <section id="overlays">
   <div class="container">
     <div class="section-label">Overlay Packs</div>
@@ -676,45 +548,34 @@
     <p class="section-sub">Switch agent personalities by swapping a single YAML key. Edit the files in <code style="font-family:var(--mono);font-size:0.85em;color:var(--blue)">overlays/</code> to go deeper.</p>
     <div class="overlays-grid">
       <div class="overlay-card">
-        <div class="overlay-pill">
-          <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><circle cx="5" cy="5" r="4" fill="#3fb950"/></svg>
-          OVERLAY PACK
-        </div>
+        <div class="overlay-pill"><svg width="10" height="10" viewBox="0 0 10 10"><circle cx="5" cy="5" r="4" fill="#3fb950"/></svg> OVERLAY PACK</div>
         <div class="overlay-title">comstar-code</div>
         <div class="overlay-desc">Optimized for active development. Fast completions, inline suggestions, and short-context reasoning. Routes to your fastest available model via the daemon.</div>
-        <div class="overlay-tags">
-          <span class="tag">Completions</span>
-          <span class="tag">Inline suggestions</span>
-          <span class="tag">Short context</span>
-          <span class="tag">Fast routing</span>
-        </div>
+        <div class="overlay-tags"><span class="tag">Completions</span><span class="tag">Inline suggestions</span><span class="tag">Short context</span><span class="tag">Fast routing</span></div>
         <code class="overlay-glow-code"><span class="ck">sessionOverlay</span>: <span class="cs">"comstar-code"</span></code>
       </div>
       <div class="overlay-card">
-        <div class="overlay-pill">
-          <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><circle cx="5" cy="5" r="4" fill="#bc8cff"/></svg>
-          OVERLAY PACK
-        </div>
+        <div class="overlay-pill"><svg width="10" height="10" viewBox="0 0 10 10"><circle cx="5" cy="5" r="4" fill="#bc8cff"/></svg> OVERLAY PACK</div>
         <div class="overlay-title">comstar-code-review</div>
         <div class="overlay-desc">Optimized for PR and diff review. Longer context window, detailed explanation mode, and critique framing. Routes to higher-capacity models on the daemon.</div>
-        <div class="overlay-tags">
-          <span class="tag">Diff review</span>
-          <span class="tag">Long context</span>
-          <span class="tag">Explanation</span>
-          <span class="tag">High-capacity routing</span>
-        </div>
+        <div class="overlay-tags"><span class="tag">Diff review</span><span class="tag">Long context</span><span class="tag">Explanation</span><span class="tag">High-capacity routing</span></div>
         <code class="overlay-glow-code"><span class="ck">sessionOverlay</span>: <span class="cs">"comstar-code-review"</span></code>
       </div>
     </div>
   </div>
 </section>
 
+<!-- FOOTER -->
 <footer>
   <div class="container">
     <div class="footer-inner">
       <a class="footer-brand" href="#">
-        <div class="logo-mark">C*</div>
-        continue-comstar
+        <svg class="star-mark" viewBox="0 0 28 28" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <polygon points="14,2.5 15.15,11.23 22.13,5.87 16.77,12.85 25.5,14 16.77,15.15 22.13,22.13 15.15,16.77 14,25.5 12.85,16.77 5.87,22.13 11.23,15.15 2.5,14 11.23,12.85 5.87,5.87 12.85,11.23" fill="url(#starGradBP)"/>
+        </svg>
+        <div class="brand-text">
+          <span class="brand-continue">continue</span><span class="brand-dash">-</span><span class="brand-comstar">comstar</span>
+        </div>
       </a>
       <div class="footer-meta">
         Apache-2.0 · Built on <a href="https://continue.dev" target="_blank" rel="noopener">Continue</a> · Part of <a href="https://github.com/zlatko-lakisic" target="_blank" rel="noopener">Project COMSTAR</a>
@@ -732,13 +593,11 @@
   // Tab switcher
   document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
-      const target = btn.dataset.tab;
-      btn.closest('.code-panel').querySelectorAll('.tab-btn').forEach(b => {
-        b.classList.remove('active'); b.setAttribute('aria-selected','false');
-      });
-      btn.closest('.code-panel').querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      const panel = btn.closest('.code-panel');
+      panel.querySelectorAll('.tab-btn').forEach(b => { b.classList.remove('active'); b.setAttribute('aria-selected','false'); });
+      panel.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
       btn.classList.add('active'); btn.setAttribute('aria-selected','true');
-      btn.closest('.code-panel').querySelector(`[data-panel="${target}"]`).classList.add('active');
+      panel.querySelector(`[data-panel="${btn.dataset.tab}"]`).classList.add('active');
     });
   });
 
@@ -759,29 +618,15 @@
   });
 
   // Nav scroll highlight
-  const sections = document.querySelectorAll('section[id]');
-  const navLinks = document.querySelectorAll('.nav-links a');
-  new IntersectionObserver(entries => {
-    entries.forEach(e => {
-      if (e.isIntersecting) {
-        navLinks.forEach(a => a.style.color = '');
-        const active = document.querySelector(`.nav-links a[href="#${e.target.id}"]`);
-        if (active) active.style.color = 'var(--blue)';
-      }
-    });
-  }, { rootMargin: '-40% 0px -55% 0px' }).observe.apply(
-    new IntersectionObserver(() => {}), []
-  );
   const obs = new IntersectionObserver(entries => {
     entries.forEach(e => {
-      if (e.isIntersecting) {
-        navLinks.forEach(a => a.style.color = '');
-        const active = document.querySelector(`.nav-links a[href="#${e.target.id}"]`);
-        if (active) active.style.color = 'var(--blue)';
-      }
+      if (!e.isIntersecting) return;
+      document.querySelectorAll('.nav-links a').forEach(a => a.style.color = '');
+      const a = document.querySelector(`.nav-links a[href="#${e.target.id}"]`);
+      if (a) a.style.color = 'var(--blue)';
     });
   }, { rootMargin: '-40% 0px -55% 0px' });
-  sections.forEach(s => obs.observe(s));
+  document.querySelectorAll('section[id]').forEach(s => obs.observe(s));
 </script>
 
 </body>
