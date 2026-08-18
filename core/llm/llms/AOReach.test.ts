@@ -193,6 +193,21 @@ describe("AOReach in-process filesystem MCP", () => {
     });
     expect(read.body.toString("utf8")).toContain("hi");
 
+    const relative = mcp.handleTunnelRequest({
+      method: "POST",
+      path: "/mcp",
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 5,
+        method: "tools/call",
+        params: {
+          name: "read_file",
+          arguments: { path: "hello.txt" },
+        },
+      }),
+    });
+    expect(relative.body.toString("utf8")).toContain("hi");
+
     const big = "x".repeat(9000);
     fs.writeFileSync(path.join(root, "big.txt"), big);
     const oversized = mcp.handleTunnelRequest({

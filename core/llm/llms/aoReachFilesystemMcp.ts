@@ -445,7 +445,21 @@ export class AoReachFilesystemMcp {
     if (!inputPath?.trim()) {
       throw new Error("path is required");
     }
-    const absolute = path.resolve(inputPath);
+    const trimmed = inputPath.trim();
+    const absolute = path.isAbsolute(trimmed)
+      ? path.resolve(trimmed)
+      : undefined;
+    if (!absolute) {
+      for (const root of this.allowlist) {
+        const joined = path.resolve(root, trimmed);
+        if (allowCreate || fs.existsSync(joined)) {
+          return this.resolveAllowed(joined, allowCreate);
+        }
+      }
+      throw new Error(
+        `Path does not exist: ${inputPath}. Allowed: ${this.allowlist.join(", ")}`,
+      );
+    }
     let candidate = absolute;
     if (!fs.existsSync(candidate)) {
       if (!allowCreate) {
