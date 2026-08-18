@@ -18,7 +18,11 @@ import {
   resolveMtlsMaterialDir,
   ReachMtlsMaterial,
 } from "./aoReachMtls.js";
-import { packAgentDefinition, packSessionOverlay, PackedOverlay } from "./aoReachOverlay.js";
+import {
+  packAgentDefinition,
+  packSessionOverlay,
+  PackedOverlay,
+} from "./aoReachOverlay.js";
 
 const APP_ID = "continue-comstar";
 const OVERLAY_TTL_SECONDS = 3600;
@@ -87,6 +91,8 @@ class AOReach extends BaseLLM {
   private filesystemMcp?: AoReachFilesystemMcp;
   private overlayRefreshTimer?: ReturnType<typeof setTimeout>;
   private readonly turns = new Map<string, TurnState>();
+  private overlayAcked = false;
+  private overlayWait?: TurnState;
 
   constructor(options: LLMOptions) {
     super(options);
@@ -100,9 +106,13 @@ class AOReach extends BaseLLM {
     this.sessionOverlay =
       aoOptions.sessionOverlay ||
       (this.agentDefinition
-        ? path.basename(this.agentDefinition, path.extname(this.agentDefinition))
+        ? path.basename(
+            this.agentDefinition,
+            path.extname(this.agentDefinition),
+          )
         : "");
-    this.timeoutSeconds = aoOptions.timeoutSeconds ?? DEFAULT_IDLE_TIMEOUT_SECONDS;
+    this.timeoutSeconds =
+      aoOptions.timeoutSeconds ?? DEFAULT_IDLE_TIMEOUT_SECONDS;
     this.streamingEnabled = aoOptions.streamingEnabled ?? true;
     this.filesystemTunnel = aoOptions.filesystemTunnel ?? true;
     this.workspaceDirs = aoOptions.workspaceDirs ?? [];
@@ -326,6 +336,8 @@ class AOReach extends BaseLLM {
         if (this.socket === socket) {
           this.socket = undefined;
           this.hello = undefined;
+          this.overlayAcked = false;
+          this.overlayWait = undefined;
         }
         this.clearOverlayRefresh();
         const reasonText = reason.toString();
@@ -387,6 +399,31 @@ class AOReach extends BaseLLM {
     if (type === "mcp_tunnel_request") {
       await this.handleTunnelRequest(socket, frame);
       return;
+    }
+
+    const overlayWait = this.overlayWait;
+    if (overlayWait && !overlayWait.aborted) {
+      const overlayType = String(frame.type || "");
+      if (
+        overlayType === "session_overlay_ack" ||
+        overlayType === "session_overlay_denied" ||
+        overlayType === "error" ||
+        overlayType === "status" ||
+        overlayType === "chunk"
+      ) {
+        overlayWait.onActivity?.();
+        overlayWait.frames.push(frame);
+        overlayWait.wake?.();
+        if (
+          overlayType === "session_overlay_ack" ||
+          overlayType === "session_overlay_denied" ||
+          overlayType === "error"
+        ) {
+          // Terminal overlay frames also fall through for logging below.
+        } else {
+          return;
+        }
+      }
     }
 
     const questionId =
@@ -456,79 +493,134 @@ class AOReach extends BaseLLM {
     }
 
     this.packed = this.loadPackedOverlay();
-
-    await this.registerOverlay(socket);
-    this.scheduleOverlayRefresh();
-    Logger.debug("AO Reach connection ready", {
-      baseUrl: this.baseUrl,
-      sessionId: this.sessionId,
-      sessionOverlay: this.sessionOverlay,
-      agentIds: this.packed.agentIds,
-    });
   }
 
-  private registerOverlay(socket: WebSocket): Promise<void> {
+  private async registerOverlay(
+    socket: WebSocket,
+    opts?: { force?: boolean },
+  ): Promise<void> {
+    for await (const _chunk of this.registerOverlayStreaming(
+      socket,
+      undefined,
+      opts,
+    )) {
+      void _chunk;
+    }
+  }
+
+  private async *registerOverlayStreaming(
+    socket: WebSocket,
+    signal?: AbortSignal,
+    opts?: { force?: boolean },
+  ): AsyncGenerator<ChatMessage> {
+    if (this.overlayAcked && !opts?.force) {
+      return;
+    }
     if (!this.packed) {
       throw new Error("AO Reach overlay pack missing.");
     }
-    const ackId = `overlay-ack-${uuidv4()}`;
+
     const state: TurnState = { frames: [], assistantBuffer: "" };
-    // Use a synthetic waiter via a one-shot promise on raw socket messages for overlay ack.
-    return new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        cleanup();
-        reject(
-          new Error(
-            "Timed out waiting for session_overlay_ack from agentic-orchestration.",
-          ),
+    this.overlayWait = state;
+    let idleTimer: ReturnType<typeof setTimeout> | undefined;
+    const armIdleTimer = () => {
+      if (this.timeoutSeconds <= 0) {
+        return;
+      }
+      clearTimeout(idleTimer);
+      idleTimer = setTimeout(() => {
+        state.error = new Error(
+          `Timed out waiting for session_overlay_ack from agentic-orchestration (${this.timeoutSeconds}s of silence).`,
         );
-      }, 30_000);
+        state.wake?.();
+      }, this.timeoutSeconds * 1000);
+    };
+    state.onActivity = armIdleTimer;
+    armIdleTimer();
 
-      const onMessage = (data: RawData) => {
-        let frame: EngineFrame;
-        try {
-          frame = JSON.parse(data.toString()) as EngineFrame;
-        } catch {
-          return;
-        }
-        const type = String(frame.type || "");
-        if (type === "session_overlay_ack") {
-          cleanup();
-          resolve();
-          return;
-        }
-        if (type === "session_overlay_denied" || type === "error") {
-          cleanup();
-          reject(
-            new Error(
-              `AO Reach session overlay registration failed: ${String(frame.message || frame.error || type)}`,
-            ),
-          );
-        }
-      };
+    const onAbort = () => {
+      state.aborted = true;
+      this.sendCancel(socket, "", { target: "overlay" });
+      state.wake?.();
+    };
+    signal?.addEventListener("abort", onAbort, { once: true });
 
-      const cleanup = () => {
-        clearTimeout(timeout);
-        socket.off("message", onMessage);
-      };
-
-      socket.on("message", onMessage);
+    try {
       socket.send(
         JSON.stringify({
           type: "session_overlay_register",
           appId: APP_ID,
           ttlSeconds: OVERLAY_TTL_SECONDS,
-          agents: this.packed!.agents,
-          skills: this.packed!.skills,
-          mcps: this.packed!.mcps,
+          agents: this.packed.agents,
+          skills: this.packed.skills,
+          mcps: this.packed.mcps,
           allowedAgentProviderIds: [],
           allowedMcpProviderIds: [],
           allowedSkillIds: [],
         }),
       );
-      void ackId;
-      void state;
-    });
+
+      while (!state.aborted) {
+        const frame = await this.nextFrame(state);
+        const type = String(frame.type || "");
+        if (type === "session_overlay_ack") {
+          this.overlayAcked = true;
+          this.scheduleOverlayRefresh();
+          Logger.debug("AO Reach connection ready", {
+            baseUrl: this.baseUrl,
+            sessionId: this.sessionId,
+            sessionOverlay: this.sessionOverlay,
+            agentIds: this.packed.agentIds,
+          });
+          return;
+        }
+        if (type === "session_overlay_denied" || type === "error") {
+          throw new Error(
+            `AO Reach session overlay registration failed: ${String(frame.message || frame.error || type)}`,
+          );
+        }
+        if (type === "status") {
+          const phase = String(frame.phase || "");
+          if (phase === "cancelled") {
+            throw Object.assign(new Error("AO Reach request cancelled."), {
+              name: "AbortError",
+            });
+          }
+          const progress = this.progressLine(frame, state);
+          if (progress) {
+            yield { role: "thinking", content: progress };
+          }
+          continue;
+        }
+        if (type === "chunk") {
+          const stream = String(frame.stream || "");
+          const text = String(frame.text || "");
+          if (stream === "thought" && text) {
+            yield {
+              role: "thinking",
+              content: text.endsWith("\n") ? text : `${text}\n`,
+            };
+            continue;
+          }
+          if ((stream === "stderr" || !stream) && text) {
+            const stripped = text.replace(/^\(engine\)\s*/i, "").trim();
+            if (stripped && stripped !== state.lastProgressLine) {
+              state.lastProgressLine = stripped;
+              yield { role: "thinking", content: `${stripped}\n` };
+            }
+          }
+        }
+      }
+      throw Object.assign(new Error("AO Reach request cancelled."), {
+        name: "AbortError",
+      });
+    } finally {
+      clearTimeout(idleTimer);
+      signal?.removeEventListener("abort", onAbort);
+      if (this.overlayWait === state) {
+        this.overlayWait = undefined;
+      }
+    }
   }
 
   private scheduleOverlayRefresh(): void {
@@ -539,7 +631,7 @@ class AOReach extends BaseLLM {
         try {
           this.packed = this.loadPackedOverlay();
           const socket = await this.ensureConnection();
-          await this.registerOverlay(socket);
+          await this.registerOverlay(socket, { force: true });
           this.scheduleOverlayRefresh();
         } catch (error) {
           Logger.warn("AO Reach overlay refresh failed; will reconnect", {
@@ -643,12 +735,17 @@ class AOReach extends BaseLLM {
     return state.frames.shift()!;
   }
 
-  private sendCancel(socket: WebSocket, questionId: string): void {
+  private sendCancel(
+    socket: WebSocket,
+    questionId: string,
+    extra?: { target?: string },
+  ): void {
     if (socket.readyState === WebSocket.OPEN) {
       socket.send(
         JSON.stringify({
           type: "cancel",
-          questionId,
+          ...(questionId ? { questionId } : {}),
+          ...(extra?.target ? { target: extra.target } : {}),
         }),
       );
     }
@@ -724,6 +821,8 @@ class AOReach extends BaseLLM {
       return;
     }
 
+    yield { role: "thinking", content: "Preparing AO session…\n" };
+
     const socket = await this.ensureConnection();
     const questionId = uuidv4();
     const startedAt = Date.now();
@@ -734,7 +833,13 @@ class AOReach extends BaseLLM {
     const cancel = () => {
       aborted = true;
       state.aborted = true;
-      this.sendCancel(socket, questionId);
+      if (this.overlayWait) {
+        this.overlayWait.aborted = true;
+        this.overlayWait.wake?.();
+        this.sendCancel(socket, questionId, { target: "overlay" });
+      } else {
+        this.sendCancel(socket, questionId);
+      }
       state.wake?.();
     };
     signal.addEventListener("abort", cancel, { once: true });
@@ -765,6 +870,10 @@ class AOReach extends BaseLLM {
     });
 
     try {
+      yield* this.registerOverlayStreaming(socket, signal);
+      if (aborted || signal.aborted) {
+        return;
+      }
       socket.send(
         JSON.stringify({
           type: "chat",

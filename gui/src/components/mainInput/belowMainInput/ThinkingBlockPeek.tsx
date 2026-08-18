@@ -8,6 +8,10 @@ import styled from "styled-components";
 import { AnimatedEllipsis } from "../../AnimatedEllipsis";
 import StyledMarkdownPreview from "../../StyledMarkdownPreview";
 import { Button } from "../../ui";
+import {
+  lastNonEmptyLine,
+  looksLikeAoProgress,
+} from "../../../util/streamingStatusText";
 
 const MarkdownWrapper = styled.div`
   & > div > *:first-child {
@@ -33,15 +37,22 @@ function ThinkingBlockPeek({
   inProgress,
   tokens,
 }: ThinkingBlockPeekProps) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(() => looksLikeAoProgress(content));
   const [startTime, setStartTime] = useState<number | null>(null);
   const [elapsedTime, setElapsedTime] = useState<string>("");
+  const progressLabel = lastNonEmptyLine(content);
 
   const duplicateRedactedThinkingBlock =
     prevItem &&
     prevItem.message.role === "thinking" &&
     redactedThinking &&
     prevItem.message.redactedThinking;
+
+  useEffect(() => {
+    if (looksLikeAoProgress(content)) {
+      setOpen(true);
+    }
+  }, [content]);
 
   useEffect(() => {
     if (inProgress) {
@@ -69,7 +80,9 @@ function ThinkingBlockPeek({
           >
             {inProgress ? (
               <span>
-                {redactedThinking ? "Redacted Thinking" : "Thinking"}
+                {redactedThinking
+                  ? "Redacted Thinking"
+                  : progressLabel || "Thinking"}
                 <AnimatedEllipsis />
               </span>
             ) : redactedThinking ? (

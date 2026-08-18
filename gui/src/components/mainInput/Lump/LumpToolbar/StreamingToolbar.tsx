@@ -1,4 +1,6 @@
 import { getAltKeyLabel, getMetaKeyLabel, isJetBrains } from "../../../../util";
+import { useAppSelector } from "../../../../redux/hooks";
+import { latestStreamingStatusText } from "../../../../util/streamingStatusText";
 import { GeneratingIndicator } from "./GeneratingIndicator";
 
 interface StreamingToolbarProps {
@@ -11,10 +13,12 @@ export function StreamingToolbar({
   displayText = "Stop",
 }: StreamingToolbarProps) {
   const jetbrains = isJetBrains();
+  const history = useAppSelector((state) => state.session.history);
+  const statusText = latestStreamingStatusText(history);
 
   return (
     <div className="flex w-full items-center justify-between">
-      <GeneratingIndicator />
+      <GeneratingIndicator text={statusText || "Generating"} />
       <div
         onClick={onStop}
         className="text-2xs cursor-pointer px-1.5 py-0.5 hover:brightness-125"

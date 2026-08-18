@@ -7,9 +7,14 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+
 import { ChatMessage, LLMOptions } from "../../index.js";
 import AOReach from "./AOReach.js";
-import { overlayRoot, startMockAoEngine } from "../../test/aoReachMockEngine.js";
+import {
+  overlayRoot,
+  startMockAoEngine,
+} from "../../test/aoReachMockEngine.js";
 
 async function collect<T>(generator: AsyncGenerator<T>): Promise<T[]> {
   const values: T[] = [];
@@ -88,22 +93,25 @@ describe("AOReach engine-ws/1 protocol (mock AO)", () => {
       runMode: "dynamic",
       appId: "continue-comstar",
     });
-    expect(engine.clientFrames.some((f) => f.type === "session_overlay_register"))
-      .toBe(true);
-    expect(engine.clientFrames.some((f) => f.type === "mcp_tunnel_response")).toBe(
-      true,
-    );
+    expect(
+      engine.clientFrames.some((f) => f.type === "session_overlay_register"),
+    ).toBe(true);
+    expect(
+      engine.clientFrames.some((f) => f.type === "mcp_tunnel_response"),
+    ).toBe(true);
 
     const thinking = messages
       .filter((m) => m.role === "thinking")
       .map((m) => String(m.content));
-    expect(thinking.some((t) => t.includes("Starting your request"))).toBe(true);
-    expect(thinking.some((t) => t.includes("Looking through the workspace"))).toBe(
+    expect(thinking.some((t) => t.includes("Starting your request"))).toBe(
       true,
     );
-    expect(thinking.some((t) => t.includes("Working with code assistant"))).toBe(
-      true,
-    );
+    expect(
+      thinking.some((t) => t.includes("Looking through the workspace")),
+    ).toBe(true);
+    expect(
+      thinking.some((t) => t.includes("Working with code assistant")),
+    ).toBe(true);
     expect(
       messages.filter((m) => m.role === "assistant").map((m) => m.content),
     ).toEqual(["pong"]);
@@ -125,7 +133,9 @@ describe("AOReach engine-ws/1 protocol (mock AO)", () => {
           {},
         ),
       ),
-    ).rejects.toThrow(/AO Reach orchestration error: No module named 'fastapi'/);
+    ).rejects.toThrow(
+      /AO Reach orchestration error: No module named 'fastapi'/,
+    );
   });
 
   it("fails overlay registration when the engine denies the pack", async () => {
@@ -136,9 +146,43 @@ describe("AOReach engine-ws/1 protocol (mock AO)", () => {
     engines.push(engine);
     const provider = createProvider(engine.url);
 
-    await expect((provider as any).ensureConnection()).rejects.toThrow(
-      /session overlay registration failed/,
-    );
+    await expect(
+      collect(
+        (provider as any)._streamChat(
+          [{ role: "user", content: "hi" }],
+          new AbortController().signal,
+          {},
+        ),
+      ),
+    ).rejects.toThrow(/session overlay registration failed/);
+  });
+
+  it("yields overlay pull status as thinking and waits past a 30s wall timeout while frames arrive", async () => {
+    const engine = await startMockAoEngine({
+      token: "test-token",
+      scenario: "overlay-pull",
+    });
+    engines.push(engine);
+    const provider = createProvider(engine.url, { timeoutSeconds: 5 } as any);
+
+    const messages = (await collect(
+      (provider as any)._streamChat(
+        [{ role: "user", content: "hi" }],
+        new AbortController().signal,
+        {},
+      ),
+    )) as ChatMessage[];
+
+    const thinking = messages
+      .filter((m) => m.role === "thinking")
+      .map((m) => String(m.content))
+      .join("\n");
+    expect(thinking).toMatch(/Preparing AO session/);
+    expect(thinking).toMatch(/Downloading qwen3\.6:27b — 40%/);
+    expect(thinking).toMatch(/Downloading qwen3\.6:27b — 84%/);
+    expect(
+      messages.filter((m) => m.role === "assistant").map((m) => m.content),
+    ).toEqual(["pong"]);
   });
 
   it("refuses to connect when session overlays are disabled on hello", async () => {

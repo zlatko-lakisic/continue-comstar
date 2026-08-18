@@ -4,7 +4,7 @@
 
 A fork of [Continue](https://github.com/continuedev/continue) wired to
 [agentic-orchestration](https://github.com/zlatko-lakisic/agentic-orchestration)
-via [AO Reach v0.11.0](https://github.com/zlatko-lakisic/agentic-orchestration-reach/releases/tag/v0.11.0).
+via [AO Reach v0.12.0](https://github.com/zlatko-lakisic/agentic-orchestration-reach/releases/tag/v0.12.0).
 Instead of calling an LLM provider directly, every inference request goes to your
 orchestration daemon, which handles model selection, agent routing, tool use,
 session memory, and the learning loop.
@@ -21,7 +21,7 @@ Continue is the best open-source code assistant shell. AO Reach gives it a backe
 
 | Component               | Requirement                                                                                                     |
 | ----------------------- | --------------------------------------------------------------------------------------------------------------- |
-| AO Reach protocol       | v0.11.0 or newer (per-turn cancel support)                                                                      |
+| AO Reach protocol       | v0.12.0 or newer (overlay prepare / pull status stream)                                                         |
 | `agentic-orchestration` | Daemon with `AGENTIC_SERVE_SESSION_OVERLAY=1` and `AGENTIC_SERVE_MCP_TUNNEL=1` (for workspace filesystem tools) |
 | Optional streaming      | `AGENTIC_SERVE_STREAM_STDOUT=1` and/or `AGENTIC_SERVE_STREAM_THOUGHTS=1` on the engine                          |
 | Optional mTLS           | Engine requires client certs; enroll once and set `mtlsMaterialDir`                                             |
@@ -72,17 +72,17 @@ models:
     streamingEnabled: true
 ```
 
-| Field              | Meaning                                                                                         |
-| ------------------ | ----------------------------------------------------------------------------------------------- |
-| `baseUrl`          | Engine URL (`wss://`, `ws://`, `https://`, or `http://`); Continue connects to `/ws`            |
-| `apiKey`           | Required token (`AO_REACH_TOKEN` if omitted / `$AO_REACH_TOKEN`)                                |
+| Field              | Meaning                                                                                                                                  |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `baseUrl`          | Engine URL (`wss://`, `ws://`, `https://`, or `http://`); Continue connects to `/ws`                                                     |
+| `apiKey`           | Required token (`AO_REACH_TOKEN` if omitted / `$AO_REACH_TOKEN`)                                                                         |
 | `agentDefinition`  | Path to an agent YAML file **or** overlay folder. Overrides `sessionOverlay`. Edit the file and reconnect (or wait for overlay refresh). |
-| `sessionOverlay`   | Optional shipped pack name under `overlays/` when `agentDefinition` is omitted |
-| `sessionId`        | Optional stable session id; default `continue-comstar-{workspaceName}`                          |
-| `timeoutSeconds`   | Idle budget: seconds of **silence** from AO before giving up (default 300, `0` waits forever)    |
-| `streamingEnabled` | When true, yields thinking + assistant chunks as they arrive                                    |
-| `mtlsMaterialDir`  | Optional folder with `cert.pem`, `key.pem`, `ca.pem` (or env `AO_REACH_MTLS_DIR`)               |
-| `filesystemTunnel` | Default true; tunnels the open workspace as `client.filesystem_local` (in-process MCP)          |
+| `sessionOverlay`   | Optional shipped pack name under `overlays/` when `agentDefinition` is omitted                                                           |
+| `sessionId`        | Optional stable session id; default `continue-comstar-{workspaceName}`                                                                   |
+| `timeoutSeconds`   | Idle budget: seconds of **silence** from AO before giving up (default 300, `0` waits forever)                                            |
+| `streamingEnabled` | When true, yields thinking + assistant chunks as they arrive                                                                             |
+| `mtlsMaterialDir`  | Optional folder with `cert.pem`, `key.pem`, `ca.pem` (or env `AO_REACH_MTLS_DIR`)                                                        |
+| `filesystemTunnel` | Default true; tunnels the open workspace as `client.filesystem_local` (in-process MCP)                                                   |
 
 Each profile can point at **your own agent YAML** (`agentDefinition`) instead of a pack
 compiled into the VSIX. A folder with `agent_providers/*.yaml` also works. `sessionOverlay`

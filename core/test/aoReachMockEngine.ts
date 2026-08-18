@@ -17,6 +17,7 @@ export type MockScenario =
   | "fastapi-error"
   | "overlay-denied"
   | "overlay-disabled"
+  | "overlay-pull"
   | "tunnel-disabled"
   | "hang";
 
@@ -249,6 +250,33 @@ export async function startMockAoEngine(
             error: "denied",
             message: "overlay rejected by engine",
           });
+          return;
+        }
+        if (scenario === "overlay-pull") {
+          send(socket, {
+            type: "status",
+            processing: true,
+            phase: "preparing",
+            message: "Downloading qwen3.6:27b — 40%",
+            percent: 40,
+          });
+          setTimeout(() => {
+            send(socket, {
+              type: "status",
+              processing: true,
+              phase: "preparing",
+              message: "Downloading qwen3.6:27b — 84%",
+              percent: 84,
+            });
+          }, 50);
+          setTimeout(() => {
+            send(socket, {
+              type: "session_overlay_ack",
+              agentIds: ["client.code_assistant"],
+              mcpIds: tunnelOn ? ["client.filesystem_local"] : [],
+              skillIds: [],
+            });
+          }, 1200);
           return;
         }
         send(socket, {
