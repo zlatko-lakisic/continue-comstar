@@ -2,4 +2,4 @@
 
 ### This will prevent the Chat panel from covering your file explorer
 
-![Move Comstar (Continue) to right sidebar](./move-to-right-sidebar.gif)
+![Move Comstar to right sidebar](./move-to-right-sidebar.gif)

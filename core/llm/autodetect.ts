@@ -53,6 +53,7 @@ const PROVIDER_HANDLES_TEMPLATING: string[] = [
   "novita",
   "msty",
   "anthropic",
+  "ao_reach",
   "bedrock",
   "cohere",
   "sagemaker",

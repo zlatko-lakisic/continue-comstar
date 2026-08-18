@@ -14,7 +14,10 @@ export function StreamingToolbar({
 }: StreamingToolbarProps) {
   const jetbrains = isJetBrains();
   const history = useAppSelector((state) => state.session.history);
-  const statusText = latestStreamingStatusText(history);
+  const streamingStatusText = useAppSelector(
+    (state) => state.session.streamingStatusText,
+  );
+  const statusText = streamingStatusText || latestStreamingStatusText(history);
 
   return (
     <div className="flex w-full items-center justify-between">

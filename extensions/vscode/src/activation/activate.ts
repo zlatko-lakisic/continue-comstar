@@ -20,7 +20,7 @@ export async function activateExtension(context: vscode.ExtensionContext) {
 
     globalContext.update("hasShownUnsupportedPlatformWarning", true);
     void vscode.window.showInformationMessage(
-      `Comstar (Continue) detected that you are using ${platformTarget}. Due to native dependencies, Comstar (Continue) may not be able to start`,
+      `Comstar detected that you are using ${platformTarget}. Due to native dependencies, Comstar may not be able to start`,
     );
   }
 
@@ -59,7 +59,7 @@ export async function activateExtension(context: vscode.ExtensionContext) {
     );
   } catch (error) {
     console.error(
-      "Failed to register Comstar (Continue) config.yaml schema, most likely, YAML extension is not installed",
+      "Failed to register Comstar config.yaml schema, most likely, YAML extension is not installed",
       error,
     );
   }

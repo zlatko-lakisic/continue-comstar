@@ -198,7 +198,7 @@ export class ContinueConsoleWebviewViewProvider
         <script>const vscode = acquireVsCodeApi();</script>
         <link href="${styleMainUri}" rel="stylesheet">
 
-        <title>Comstar (Continue) Console</title>
+        <title>Comstar Console</title>
       </head>
       <body>
         <div id="root"></div>

@@ -37,6 +37,11 @@ import { v4 as uuidv4 } from "uuid";
 import { type InlineErrorMessageType } from "../../components/mainInput/InlineErrorMessage";
 import { toolCallCtxItemToCtxItemWithId } from "../../pages/gui/ToolCallDiv/utils";
 import { addToolCallDeltaToState, isEditTool } from "../../util/toolCallState";
+import {
+  lastNonEmptyLine,
+  mergeThinkingContent,
+  truncateStatusText,
+} from "../../util/streamingStatusText";
 import { RootState } from "../store";
 import { streamResponseThunk } from "../thunks/streamResponse";
 import { findChatHistoryItemByToolCallId, findToolCallById } from "../util";
@@ -223,6 +228,8 @@ type SessionState = {
   contextPercentage?: number;
   inlineErrorMessage?: InlineErrorMessageType;
   compactionLoading: Record<number, boolean>; // Track compaction loading by message index
+  /** Latest AO / thinking status line for the Generating toolbar (independent of history). */
+  streamingStatusText?: string;
 };
 
 export const INITIAL_SESSION_STATE: SessionState = {
@@ -243,6 +250,7 @@ export const INITIAL_SESSION_STATE: SessionState = {
   lastSessionId: undefined,
   newestToolbarPreviewForInput: {},
   compactionLoading: {},
+  streamingStatusText: undefined,
 };
 
 export const sessionSlice = createSlice({
@@ -516,12 +524,23 @@ export const sessionSlice = createSlice({
       }
 
       state.isStreaming = false;
+      state.streamingStatusText = undefined;
     },
     abortStream: (state) => {
       state.streamAborter.abort();
       state.streamAborter = new AbortController();
+      state.streamingStatusText = undefined;
     },
     streamUpdate: (state, action: PayloadAction<ChatMessage[]>) => {
+      for (const message of action.payload) {
+        if (message.role === "thinking" && !message.redactedThinking) {
+          const text = message.content ? renderChatMessage(message) : "";
+          const line = lastNonEmptyLine(text);
+          if (line) {
+            state.streamingStatusText = truncateStatusText(line);
+          }
+        }
+      }
       if (state.history.length) {
         for (const message of action.payload) {
           let lastItem = state.history[state.history.length - 1];
@@ -635,7 +654,17 @@ export const sessionSlice = createSlice({
                 lastMessage.content.length > 0 ||
                 messageContent.trim().length > 0
               ) {
-                lastMessage.content += messageContent;
+                if (
+                  message.role === "thinking" &&
+                  lastMessage.role === "thinking"
+                ) {
+                  lastMessage.content = mergeThinkingContent(
+                    String(lastMessage.content),
+                    messageContent,
+                  );
+                } else {
+                  lastMessage.content += messageContent;
+                }
               }
             }
           } else if (message.role === "thinking" && message.signature) {
@@ -695,6 +724,7 @@ export const sessionSlice = createSlice({
       state.inlineErrorMessage = undefined;
       state.isPruned = false;
       state.contextPercentage = undefined;
+      state.streamingStatusText = undefined;
 
       if (payload) {
         state.history = payload.history as any;

@@ -27,7 +27,8 @@ async function buildGui(isGhAction) {
   if (!process.cwd().endsWith("gui")) {
     process.chdir(path.join(continueDir, "gui"));
   }
-  if (isGhAction) {
+  if (isGhAction || process.env.SKIP_GUI_BUILD !== "true") {
+    console.log("[info] Building GUI…");
     execCmdSync("npm run build");
   }
 

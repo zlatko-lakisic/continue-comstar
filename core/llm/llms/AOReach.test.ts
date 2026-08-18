@@ -67,7 +67,9 @@ describe("AOReach overlay packer", () => {
         ? "../overlays/comstar-code/agent_providers/code_assistant.yaml"
         : "overlays/comstar-code/agent_providers/code_assistant.yaml",
     );
-    const packed = packAgentDefinition(yamlPath, { includeFilesystemMcp: true });
+    const packed = packAgentDefinition(yamlPath, {
+      includeFilesystemMcp: true,
+    });
     expect(packed.agentIds).toEqual(["client.code_assistant"]);
     expect(packed.agents).toHaveLength(1);
     expect(packed.mcps[0]?.id).toBe("client.filesystem_local");
@@ -263,6 +265,11 @@ describe("AOReach", () => {
     );
   });
 
+  it("does not apply ChatML templateMessages for ao_reach", () => {
+    const provider = createProvider({ model: "ao_reach" });
+    expect(provider.templateMessages).toBeFalsy();
+  });
+
   it("streams thought then stdout and finishes on run_end", async () => {
     const provider = createProvider();
     const sent: Record<string, unknown>[] = [];
@@ -271,6 +278,7 @@ describe("AOReach", () => {
       send: jest.fn((data: string) => sent.push(JSON.parse(data))),
     };
     (provider as any).ensureConnection = jest.fn().mockResolvedValue(socket);
+    (provider as any).overlayAcked = true;
     (provider as any).packed = {
       agentIds: ["client.code_assistant"],
       agents: [],
@@ -328,11 +336,86 @@ describe("AOReach", () => {
 
     const messages = (await collect(gen)) as ChatMessage[];
     await pump;
-    expect(messages[0]).toEqual({ role: "thinking", content: "planning…" });
+    expect(messages[0]).toEqual({
+      role: "thinking",
+      content: "Preparing AO session…\n",
+    });
+    expect(
+      messages.filter((m) => m.role === "thinking").map((m) => m.content),
+    ).toContain("planning…");
     expect(
       messages.filter((m) => m.role === "assistant").map((m) => m.content),
     ).toEqual(["Hello", " world"]);
     expect(sent.some((f) => f.type === "chat")).toBe(true);
+  });
+
+  it("public streamChat yields thinking instead of dropping it via ChatML _streamComplete", async () => {
+    const provider = createProvider({ model: "ao_reach" });
+    const sent: Record<string, unknown>[] = [];
+    const socket = {
+      readyState: WebSocket.OPEN,
+      send: jest.fn((data: string) => sent.push(JSON.parse(data))),
+    };
+    (provider as any).ensureConnection = jest.fn().mockResolvedValue(socket);
+    (provider as any).overlayAcked = true;
+    (provider as any).packed = {
+      agentIds: ["client.code_assistant"],
+      agents: [],
+      skills: [],
+      mcps: [],
+    };
+
+    const gen = provider.streamChat(
+      [{ role: "user", content: "hi" }],
+      new AbortController().signal,
+      {},
+    );
+
+    const pump = (async () => {
+      for (let i = 0; i < 40 && !sent.some((f) => f.type === "chat"); i++) {
+        await new Promise((r) => setTimeout(r, 5));
+      }
+      const chat = sent.find((f) => f.type === "chat") as {
+        questionId: string;
+      };
+      const qid = chat.questionId;
+      const state = (provider as any).turns.get(qid);
+      state.frames.push({
+        type: "chunk",
+        stream: "thought",
+        text: "planning…",
+        question_id: qid,
+      });
+      state.wake?.();
+      await new Promise((r) => setTimeout(r, 5));
+      state.frames.push({
+        type: "chunk",
+        stream: "stdout",
+        text: "Hello",
+        question_id: qid,
+      });
+      state.wake?.();
+      await new Promise((r) => setTimeout(r, 5));
+      state.frames.push({
+        type: "run_end",
+        ok: true,
+        question_id: qid,
+      });
+      state.wake?.();
+    })();
+
+    const messages = (await collect(gen)) as ChatMessage[];
+    await pump;
+    expect(messages[0]).toEqual({
+      role: "thinking",
+      content: "Preparing AO session…\n",
+    });
+    expect(
+      messages.filter((m) => m.role === "thinking").map((m) => m.content),
+    ).toContain("planning…");
+    expect(
+      messages.filter((m) => m.role === "assistant").map((m) => m.content),
+    ).toEqual(["Hello"]);
   });
 
   it("sends cancel on abort without closing the socket", async () => {
@@ -344,6 +427,7 @@ describe("AOReach", () => {
       terminate: jest.fn(),
     };
     (provider as any).ensureConnection = jest.fn().mockResolvedValue(socket);
+    (provider as any).overlayAcked = true;
     (provider as any).packed = {
       agentIds: ["client.code_assistant"],
       agents: [],
@@ -379,6 +463,7 @@ describe("AOReach", () => {
       send: jest.fn((data: string) => sent.push(JSON.parse(data))),
     };
     (provider as any).ensureConnection = jest.fn().mockResolvedValue(socket);
+    (provider as any).overlayAcked = true;
     (provider as any).packed = {
       agentIds: ["client.code_assistant"],
       agents: [],
@@ -408,6 +493,7 @@ describe("AOReach", () => {
       send: jest.fn((data: string) => sent.push(JSON.parse(data))),
     };
     (provider as any).ensureConnection = jest.fn().mockResolvedValue(socket);
+    (provider as any).overlayAcked = true;
     (provider as any).packed = {
       agentIds: ["client.code_assistant"],
       agents: [],
@@ -468,9 +554,10 @@ describe("AOReach", () => {
     const thinking = messages
       .filter((m) => m.role === "thinking")
       .map((m) => String(m.content));
-    expect(thinking).toHaveLength(6);
-    expect(thinking[0]).toBe("Working through 3 steps… (10s)\n");
-    expect(thinking[5]).toBe("[2/3] Working with code assistant…\n");
+    expect(thinking).toHaveLength(7);
+    expect(thinking[0]).toBe("Preparing AO session…\n");
+    expect(thinking[1]).toBe("Working through 3 steps… (10s)\n");
+    expect(thinking[6]).toBe("[2/3] Working with code assistant…\n");
     expect(sent.some((f) => f.type === "cancel")).toBe(false);
   });
 
@@ -482,6 +569,7 @@ describe("AOReach", () => {
       send: jest.fn((data: string) => sent.push(JSON.parse(data))),
     };
     (provider as any).ensureConnection = jest.fn().mockResolvedValue(socket);
+    (provider as any).overlayAcked = true;
     (provider as any).packed = {
       agentIds: ["client.code_assistant"],
       agents: [],

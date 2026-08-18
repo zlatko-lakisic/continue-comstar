@@ -1,9 +1,62 @@
 export function lastNonEmptyLine(content: string): string {
-  const lines = String(content || "")
+  const lines = thinkingLogLines(content);
+  return lines[lines.length - 1] || "";
+}
+
+/** Strip elapsed / percent so heartbeat updates compare as the same status line. */
+export function progressLineKey(line: string): string {
+  return String(line || "")
+    .trim()
+    .replace(/\(\s*(?:\d+\s*m(?:in)?s?\s*)?\d+\s*s(?:ec)?s?\s*\)/gi, "")
+    .replace(/\d+\s*%/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+export function sameProgressFamily(a: string, b: string): boolean {
+  const left = progressLineKey(a);
+  const right = progressLineKey(b);
+  return Boolean(left) && left === right;
+}
+
+export function thinkingLogLines(content: string): string[] {
+  const raw = String(content || "")
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter(Boolean);
-  return lines[lines.length - 1] || "";
+  const lines: string[] = [];
+  for (const line of raw) {
+    const prev = lines[lines.length - 1];
+    if (prev && (prev === line || sameProgressFamily(prev, line))) {
+      lines[lines.length - 1] = line;
+      continue;
+    }
+    lines.push(line);
+  }
+  return lines;
+}
+
+export function mergeThinkingContent(
+  existing: string,
+  incoming: string,
+): string {
+  const incomingText = String(incoming || "");
+  const existingText = String(existing || "");
+  if (!incomingText) {
+    return existingText;
+  }
+  const existingLine = lastNonEmptyLine(existingText);
+  const incomingLine = lastNonEmptyLine(incomingText);
+  if (
+    existingLine &&
+    incomingLine &&
+    sameProgressFamily(existingLine, incomingLine)
+  ) {
+    const merged = thinkingLogLines(`${existingText}\n${incomingText}`);
+    return merged.length ? `${merged.join("\n")}\n` : "";
+  }
+  return existingText + incomingText;
 }
 
 export function looksLikeAoProgress(content: string): boolean {
@@ -19,6 +72,7 @@ export function looksLikeAoProgress(content: string): boolean {
     text.includes("handshake") ||
     text.includes("connecting") ||
     text.includes("warming") ||
+    text.includes("working through") ||
     /\d+\s*%/.test(text)
   );
 }

@@ -96,6 +96,9 @@ class AOReach extends BaseLLM {
 
   constructor(options: LLMOptions) {
     super(options);
+    // Continue autodetects ChatML for unknown model names (including "ao_reach").
+    // That routes streamChat through _streamComplete, which drops thinking chunks.
+    this.templateMessages = undefined;
 
     const aoOptions = options as AOReachOptions;
     this.baseUrl = (aoOptions.baseUrl || aoOptions.apiBase || "").replace(

@@ -22,7 +22,7 @@ export class DownloadYamlExtensionCodeLensProvider
     const docCodeLens: vscode.CodeLens = {
       range: new vscode.Range(0, 0, 0, 0),
       command: {
-        title: "📖 View Comstar (Continue) Reference",
+        title: "📖 View Comstar Reference",
         command: "vscode.open",
         arguments: [vscode.Uri.parse("https://docs.continue.dev/reference")],
       },

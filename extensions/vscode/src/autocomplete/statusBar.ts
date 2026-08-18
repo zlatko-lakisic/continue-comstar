@@ -48,29 +48,29 @@ const statusBarItemText = (
   error?: boolean,
 ) => {
   if (error) {
-    return "$(alert) Comstar (Continue) (config error)";
+    return "$(alert) Comstar (config error)";
   }
 
   let text: string;
   switch (status) {
     case undefined:
       if (loading) {
-        text = "$(loading~spin) Comstar (Continue)";
+        text = "$(loading~spin) Comstar";
       } else {
-        text = "Comstar (Continue)";
+        text = "Comstar";
       }
       break;
     case StatusBarStatus.Disabled:
-      text = "$(circle-slash) Comstar (Continue)";
+      text = "$(circle-slash) Comstar";
       break;
     case StatusBarStatus.Enabled:
-      text = "$(check) Comstar (Continue)";
+      text = "$(check) Comstar";
       break;
     case StatusBarStatus.Paused:
-      text = "$(debug-pause) Comstar (Continue)";
+      text = "$(debug-pause) Comstar";
       break;
     default:
-      text = "Comstar (Continue)";
+      text = "Comstar";
   }
 
   // Append Next Edit indicator if enabled.

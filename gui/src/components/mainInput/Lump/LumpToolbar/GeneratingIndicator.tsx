@@ -9,7 +9,7 @@ export function GeneratingIndicator({
 }) {
   return (
     <div className="text-description flex items-center" data-testid={testId}>
-      <span className="text-xs">{text}</span>
+      <span className="text-2xs">{text}</span>
       <AnimatedEllipsis />
     </div>
   );

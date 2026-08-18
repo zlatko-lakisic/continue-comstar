@@ -88,6 +88,11 @@ void (async () => {
 
   process.chdir(path.join(continueDir, "gui"));
 
+  if (process.env.SKIP_GUI_BUILD !== "true") {
+    console.log("[info] Building GUI before packaging…");
+    execCmdSync("npm run build");
+  }
+
   // Copy over the dist folder to the JetBrains extension //
   const intellijExtensionWebviewPath = path.join(
     "..",

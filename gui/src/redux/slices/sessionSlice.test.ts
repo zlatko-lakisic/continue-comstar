@@ -76,6 +76,7 @@ describe("sessionSlice streamUpdate", () => {
     newestToolbarPreviewForInput: {},
     isSessionMetadataLoading: false,
     compactionLoading: {},
+    streamingStatusText: undefined,
   });
 
   describe("Basic Chat Message", () => {
@@ -389,6 +390,79 @@ describe("sessionSlice streamUpdate", () => {
       expect(newState.history).toHaveLength(2);
       expect((newState.history[1].message as any).signature).toBe(
         "test-signature",
+      );
+    });
+
+    it("applies thinking without signature after empty assistant placeholder", () => {
+      const initialState = createInitialState();
+      initialState.history.push({
+        message: {
+          role: "assistant",
+          content: "",
+          id: "empty-assistant",
+        },
+        contextItems: [],
+      });
+
+      const action = {
+        type: "session/streamUpdate",
+        payload: [
+          {
+            role: "thinking" as const,
+            content: "Preparing AO session…\n",
+          },
+        ],
+      };
+
+      const newState = sessionSlice.reducer(initialState, action);
+
+      expect(newState.streamingStatusText).toBe("Preparing AO session…");
+      const thinking = newState.history.filter(
+        (item) => item.message.role === "thinking",
+      );
+      expect(thinking).toHaveLength(1);
+      expect(thinking[0].message.content).toBe("Preparing AO session…\n");
+    });
+
+    it("replaces heartbeat thinking lines instead of appending them", () => {
+      const initialState = createInitialState();
+      let newState = sessionSlice.reducer(initialState, {
+        type: "session/streamUpdate",
+        payload: [
+          {
+            role: "thinking" as const,
+            content: "Preparing AO session…\n",
+          },
+        ],
+      });
+      newState = sessionSlice.reducer(newState, {
+        type: "session/streamUpdate",
+        payload: [
+          {
+            role: "thinking" as const,
+            content: "Working through 1 step… (10s)\n",
+          },
+        ],
+      });
+      newState = sessionSlice.reducer(newState, {
+        type: "session/streamUpdate",
+        payload: [
+          {
+            role: "thinking" as const,
+            content: "Working through 1 step… (1m 40s)\n",
+          },
+        ],
+      });
+
+      const thinking = newState.history.filter(
+        (item) => item.message.role === "thinking",
+      );
+      expect(thinking).toHaveLength(1);
+      expect(thinking[0].message.content).toBe(
+        "Preparing AO session…\nWorking through 1 step… (1m 40s)\n",
+      );
+      expect(newState.streamingStatusText).toBe(
+        "Working through 1 step… (1m 40s)",
       );
     });
 

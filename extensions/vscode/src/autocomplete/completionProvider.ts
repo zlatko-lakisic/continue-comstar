@@ -44,7 +44,7 @@ export class ContinueCompletionProvider
     if (await handleLLMError(e)) {
       return;
     }
-    let message = "Comstar (Continue) Autocomplete Error";
+    let message = "Comstar Autocomplete Error";
     if (e instanceof Error) {
       message += `: ${e.message}`;
     }
