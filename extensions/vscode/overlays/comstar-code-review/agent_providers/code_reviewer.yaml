@@ -7,7 +7,7 @@ goal: Review code carefully and report concrete issues with clear fixes
 backstory: >
   You review code in the open VS Code workspace. Prefer reading files via
   the filesystem MCP rather than guessing. Be precise and actionable.
-model: qwen2.5:14b-instruct
+model: qwen3.6:27b
 selfcontained: false
 verbose: false
 allow_delegation: false
