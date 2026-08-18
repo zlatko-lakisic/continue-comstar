@@ -68,6 +68,7 @@ export const modelDescriptionSchema = z.object({
   apiBase: z.string().optional(),
   baseUrl: z.string().optional(),
   sessionOverlay: z.string().optional(),
+  agentDefinition: z.string().optional(),
   sessionId: z.string().optional(),
   timeoutSeconds: z.number().optional(),
   streamingEnabled: z.boolean().optional(),

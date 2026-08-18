@@ -56,7 +56,8 @@ models:
     baseUrl: wss://ao.lan:8765
     apiKey: $AO_REACH_TOKEN
     sessionOverlay: comstar-code
-    timeoutSeconds: 15
+    # Silence budget, not a run deadline — AO heartbeats every ~10s while working.
+    timeoutSeconds: 300
     streamingEnabled: true
     # mtlsMaterialDir: ~/.continue-comstar/ao-mtls
     # filesystemTunnel: true
@@ -67,7 +68,7 @@ models:
     apiKey: $AO_REACH_TOKEN
     sessionOverlay: comstar-code-review
     sessionId: continue-comstar-review
-    timeoutSeconds: 30
+    timeoutSeconds: 300
     streamingEnabled: true
 ```
 
@@ -75,22 +76,41 @@ models:
 | ------------------ | ----------------------------------------------------------------------------------------------- |
 | `baseUrl`          | Engine URL (`wss://`, `ws://`, `https://`, or `http://`); Continue connects to `/ws`            |
 | `apiKey`           | Required token (`AO_REACH_TOKEN` if omitted / `$AO_REACH_TOKEN`)                                |
-| `sessionOverlay`   | Overlay pack name under repo `overlays/` (registered on connect via `session_overlay_register`) |
+| `agentDefinition`  | Path to an agent YAML file **or** overlay folder. Overrides `sessionOverlay`. Edit the file and reconnect (or wait for overlay refresh). |
+| `sessionOverlay`   | Optional shipped pack name under `overlays/` when `agentDefinition` is omitted |
 | `sessionId`        | Optional stable session id; default `continue-comstar-{workspaceName}`                          |
-| `timeoutSeconds`   | Hard deadline; Continue also sends `cancel` for that turn                                       |
+| `timeoutSeconds`   | Idle budget: seconds of **silence** from AO before giving up (default 300, `0` waits forever)    |
 | `streamingEnabled` | When true, yields thinking + assistant chunks as they arrive                                    |
 | `mtlsMaterialDir`  | Optional folder with `cert.pem`, `key.pem`, `ca.pem` (or env `AO_REACH_MTLS_DIR`)               |
 | `filesystemTunnel` | Default true; tunnels the open workspace as `client.filesystem_local` (in-process MCP)          |
 
-Each profile selects a **shipped overlay pack** (`overlays/comstar-code`, `overlays/comstar-code-review`), not a remote named server overlay. Stop in the UI sends `{ type: cancel, questionId }` so the engine ends that run without dropping the socket.
+Each profile can point at **your own agent YAML** (`agentDefinition`) instead of a pack
+compiled into the VSIX. A folder with `agent_providers/*.yaml` also works. `sessionOverlay`
+still selects a shipped pack when `agentDefinition` is omitted.
+
+Long orchestrations are not cut off by a clock: AO streams `status` frames (plus a
+keepalive every `AGENTIC_SERVE_HEARTBEAT_SECONDS`, default 10) and each one both
+appears in the thinking pane and re-arms the idle budget. A `timeoutSeconds` trip
+therefore means AO genuinely stopped talking — check the engine logs.
 
 ## Session overlays
 
-continue-comstar ships overlay packs under `overlays/<sessionOverlay>/` (for example
-`overlays/comstar-code`). On connect, AOReach packs those YAML agents, registers
+continue-comstar can still ship overlay packs under `overlays/<sessionOverlay>/`, but the
+usual setup is a per-model `agentDefinition` path in `config.yaml`:
+
+```yaml
+- name: COMSTAR Code
+  provider: ao_reach
+  baseUrl: wss://ao.lan:8765
+  apiKey: $AO_REACH_TOKEN
+  agentDefinition: C:/Users/you/.continue-comstar/agents/code_assistant.yaml
+```
+
+On connect, AOReach loads that YAML (or an overlay folder), registers
 them with `session_overlay_register` (`appId: continue-comstar`), and tunnels the
-open workspace as `client.filesystem_local` (in-process MCP). Edit the pack on
-disk to change agent personality, model, or tools — then reconnect.
+open workspace as `client.filesystem_local` (in-process MCP). Edit the file on
+disk to change agent personality, model, or tools — then reconnect (TTL refresh
+also re-reads the file).
 
 Example agent file:
 

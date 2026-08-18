@@ -8,7 +8,7 @@ backstory: >
   You are integrated into VS Code through the continue-comstar extension.
   You receive editor context and can use the workspace filesystem MCP to
   read and write files under the open workspace.
-model: qwen3.6:27b
+model: qwen2.5:14b-instruct
 selfcontained: false
 verbose: false
 allow_delegation: false

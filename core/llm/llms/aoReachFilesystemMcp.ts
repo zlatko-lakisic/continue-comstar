@@ -5,6 +5,7 @@
 
 import fs from "fs";
 import path from "path";
+import { fileURLToPath } from "url";
 
 export interface TunnelHttpRequest {
   method: string;
@@ -60,6 +61,25 @@ function jsonError(
 
 function textContent(text: string) {
   return { content: [{ type: "text", text }] };
+}
+
+/**
+ * The IDE hands us workspace folders as URIs (`file:///d%3A/Projects/app`),
+ * which path.resolve cannot interpret. Convert those to local paths.
+ */
+function toLocalPath(dir: string): string | undefined {
+  const trimmed = dir.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+  if (!trimmed.startsWith("file://")) {
+    return trimmed;
+  }
+  try {
+    return fileURLToPath(trimmed);
+  } catch {
+    return undefined;
+  }
 }
 
 const TOOLS = [
@@ -188,11 +208,15 @@ export class AoReachFilesystemMcp {
 
   constructor(allowlistDirs: string[]) {
     const resolved = allowlistDirs
+      .map((dir) => toLocalPath(dir))
+      .filter((dir): dir is string => Boolean(dir))
       .map((dir) => path.resolve(dir))
       .filter((dir) => fs.existsSync(dir));
     if (resolved.length === 0) {
       throw new Error(
-        "AO Reach filesystem tunnel requires at least one open workspace folder.",
+        `AO Reach filesystem tunnel requires at least one open workspace folder (received: ${
+          allowlistDirs.length ? allowlistDirs.join(", ") : "none"
+        }).`,
       );
     }
     this.allowlist = resolved.map((dir) => fs.realpathSync(dir));

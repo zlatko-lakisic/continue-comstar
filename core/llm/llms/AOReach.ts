@@ -5,6 +5,7 @@
 
 import { v4 as uuidv4 } from "uuid";
 import WebSocket, { RawData } from "ws";
+import path from "path";
 
 import { ChatMessage, CompletionOptions, LLMOptions } from "../../index.js";
 import { Logger } from "../../util/Logger.js";
@@ -17,17 +18,28 @@ import {
   resolveMtlsMaterialDir,
   ReachMtlsMaterial,
 } from "./aoReachMtls.js";
-import { packSessionOverlay, PackedOverlay } from "./aoReachOverlay.js";
+import { packAgentDefinition, packSessionOverlay, PackedOverlay } from "./aoReachOverlay.js";
 
 const APP_ID = "continue-comstar";
 const OVERLAY_TTL_SECONDS = 3600;
 
 type EngineFrame = Record<string, unknown>;
 
+/**
+ * Idle (not wall-clock) budget: a run is only abandoned after this much silence
+ * from AO. The engine heartbeats every ~10s while working, so orchestrations
+ * that legitimately take many minutes are never cut short. Set 0 to disable.
+ */
+/** 0 = wait indefinitely; set a positive value to abort after that many seconds of silence from AO. */
+const DEFAULT_IDLE_TIMEOUT_SECONDS = 0;
+
 interface AOReachOptions extends LLMOptions {
   baseUrl: string;
-  sessionOverlay: string;
+  sessionOverlay?: string;
+  /** Path to an agent YAML file or overlay folder (takes precedence over sessionOverlay). */
+  agentDefinition?: string;
   sessionId?: string;
+  /** Seconds of silence from AO before giving up (0 disables). */
   timeoutSeconds?: number;
   streamingEnabled?: boolean;
   workspaceName?: string;
@@ -44,6 +56,9 @@ interface TurnState {
   error?: Error;
   aborted?: boolean;
   assistantBuffer: string;
+  /** Re-arms the idle watchdog; AO liveness is measured from the last frame. */
+  onActivity?: () => void;
+  lastProgressLine?: string;
 }
 
 class AOReach extends BaseLLM {
@@ -54,6 +69,7 @@ class AOReach extends BaseLLM {
 
   readonly baseUrl: string;
   readonly sessionOverlay: string;
+  readonly agentDefinition?: string;
   readonly sessionId: string;
   readonly timeoutSeconds: number;
   readonly streamingEnabled: boolean;
@@ -80,8 +96,13 @@ class AOReach extends BaseLLM {
       /\/+$/,
       "",
     );
-    this.sessionOverlay = aoOptions.sessionOverlay || "";
-    this.timeoutSeconds = aoOptions.timeoutSeconds ?? 15;
+    this.agentDefinition = aoOptions.agentDefinition?.trim() || undefined;
+    this.sessionOverlay =
+      aoOptions.sessionOverlay ||
+      (this.agentDefinition
+        ? path.basename(this.agentDefinition, path.extname(this.agentDefinition))
+        : "");
+    this.timeoutSeconds = aoOptions.timeoutSeconds ?? DEFAULT_IDLE_TIMEOUT_SECONDS;
     this.streamingEnabled = aoOptions.streamingEnabled ?? true;
     this.filesystemTunnel = aoOptions.filesystemTunnel ?? true;
     this.workspaceDirs = aoOptions.workspaceDirs ?? [];
@@ -106,11 +127,15 @@ class AOReach extends BaseLLM {
         "AO Reach requires apiKey in config.yaml or AO_REACH_TOKEN in the environment.",
       );
     }
-    if (!this.sessionOverlay) {
-      throw new Error("AO Reach requires sessionOverlay in config.yaml.");
+    if (!this.agentDefinition && !this.sessionOverlay) {
+      throw new Error(
+        "AO Reach requires agentDefinition (path to agent YAML or overlay folder) or sessionOverlay (shipped pack name) in config.yaml.",
+      );
     }
-    if (!Number.isFinite(this.timeoutSeconds) || this.timeoutSeconds <= 0) {
-      throw new Error("AO Reach timeoutSeconds must be greater than zero.");
+    if (!Number.isFinite(this.timeoutSeconds) || this.timeoutSeconds < 0) {
+      throw new Error(
+        "AO Reach timeoutSeconds must be zero (no idle timeout) or greater.",
+      );
     }
     if (this.resolvedMtlsDir) {
       assertMtlsUsesTls(this.baseUrl);
@@ -195,6 +220,15 @@ class AOReach extends BaseLLM {
         return await this.openConnection();
       } catch (error) {
         lastError = error;
+        Logger.warn("AO Reach connect attempt failed", {
+          attempt: attempt + 1,
+          baseUrl: this.baseUrl,
+          error: error instanceof Error ? error.message : String(error),
+          cause:
+            error instanceof Error && error.cause instanceof Error
+              ? error.cause.message
+              : undefined,
+        });
         if (this.isAuthError(error)) {
           throw this.authError();
         }
@@ -374,6 +408,7 @@ class AOReach extends BaseLLM {
     if (state.aborted) {
       return;
     }
+    state.onActivity?.();
 
     if (type === "error") {
       state.error = new Error(
@@ -385,6 +420,18 @@ class AOReach extends BaseLLM {
 
     state.frames.push(frame);
     state.wake?.();
+  }
+
+  private loadPackedOverlay(): PackedOverlay {
+    if (this.agentDefinition) {
+      return packAgentDefinition(this.agentDefinition, {
+        includeFilesystemMcp: this.filesystemTunnel,
+      });
+    }
+    return packSessionOverlay(this.sessionOverlay, {
+      overlayRoot: this.overlayRoot,
+      includeFilesystemMcp: this.filesystemTunnel,
+    });
   }
 
   private async afterHello(socket: WebSocket): Promise<void> {
@@ -408,10 +455,7 @@ class AOReach extends BaseLLM {
       this.filesystemMcp = undefined;
     }
 
-    this.packed = packSessionOverlay(this.sessionOverlay, {
-      overlayRoot: this.overlayRoot,
-      includeFilesystemMcp: this.filesystemTunnel,
-    });
+    this.packed = this.loadPackedOverlay();
 
     await this.registerOverlay(socket);
     this.scheduleOverlayRefresh();
@@ -493,6 +537,7 @@ class AOReach extends BaseLLM {
     this.overlayRefreshTimer = setTimeout(() => {
       void (async () => {
         try {
+          this.packed = this.loadPackedOverlay();
           const socket = await this.ensureConnection();
           await this.registerOverlay(socket);
           this.scheduleOverlayRefresh();
@@ -627,10 +672,47 @@ class AOReach extends BaseLLM {
     if (this.isAuthError(error)) {
       return this.authError();
     }
+    const detail =
+      error instanceof Error
+        ? error.message
+        : error
+          ? String(error)
+          : "unknown error";
     return new Error(
-      `AO Reach endpoint unreachable at ${this.baseUrl}. Is the agentic-orchestration daemon running with /ws?`,
+      `AO Reach endpoint unreachable at ${this.baseUrl}. Underlying error: ${detail}`,
       { cause: error },
     );
+  }
+
+  /**
+   * Render an AO `status` frame as a progress line for the thinking pane.
+   * Returns undefined for phases with nothing new to say, so the pane shows
+   * what the orchestration is doing without repeating itself.
+   */
+  private progressLine(
+    frame: EngineFrame,
+    state: TurnState,
+  ): string | undefined {
+    const phase = String(frame.phase || "");
+    if (phase === "done") {
+      return undefined;
+    }
+    const message = String(frame.message || "").trim();
+    if (!message) {
+      return undefined;
+    }
+    const step = frame.step as number | undefined;
+    const stepCount = frame.stepCount as number | undefined;
+    const prefix =
+      typeof step === "number" && typeof stepCount === "number"
+        ? `[${step}/${stepCount}] `
+        : "";
+    const line = `${prefix}${message}`;
+    if (line === state.lastProgressLine) {
+      return undefined;
+    }
+    state.lastProgressLine = line;
+    return `${line}\n`;
   }
 
   protected async *_streamChat(
@@ -657,13 +739,24 @@ class AOReach extends BaseLLM {
     };
     signal.addEventListener("abort", cancel, { once: true });
 
-    const timeout = setTimeout(() => {
-      this.sendCancel(socket, questionId);
-      state.error = new Error(
-        `Orchestration timed out after ${this.timeoutSeconds}s. Consider raising timeoutSeconds or switching to a faster overlay.`,
-      );
-      state.wake?.();
-    }, this.timeoutSeconds * 1000);
+    // Watchdog on silence, not on total run time: any frame from AO (progress,
+    // thought, token, heartbeat) re-arms it, so long orchestrations keep running.
+    let idleTimer: ReturnType<typeof setTimeout> | undefined;
+    const armIdleTimer = () => {
+      if (this.timeoutSeconds <= 0) {
+        return;
+      }
+      clearTimeout(idleTimer);
+      idleTimer = setTimeout(() => {
+        this.sendCancel(socket, questionId);
+        state.error = new Error(
+          `AO Reach stopped reporting progress for ${this.timeoutSeconds}s. The engine may have died mid-run — check the engine logs, or set timeoutSeconds: 0 to wait indefinitely.`,
+        );
+        state.wake?.();
+      }, this.timeoutSeconds * 1000);
+    };
+    state.onActivity = armIdleTimer;
+    armIdleTimer();
 
     Logger.debug("AO Reach turn start", {
       questionId,
@@ -725,6 +818,10 @@ class AOReach extends BaseLLM {
               `AO Reach orchestration error: ${String(frame.message || code)}`,
             );
           }
+          const progress = this.progressLine(frame, state);
+          if (progress) {
+            yield { role: "thinking", content: progress };
+          }
           continue;
         }
 
@@ -762,7 +859,8 @@ class AOReach extends BaseLLM {
       });
       throw error;
     } finally {
-      clearTimeout(timeout);
+      clearTimeout(idleTimer);
+      state.onActivity = undefined;
       signal.removeEventListener("abort", cancel);
       this.turns.delete(questionId);
       Logger.debug("AO Reach turn end", {

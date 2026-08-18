@@ -1,6 +1,6 @@
 <div align="center">
 
-![Continue logo](media/readme.png)
+![Comstar (Continue) logo](media/readme.png)
 
 <div align="center">
 
@@ -15,7 +15,7 @@
 
 </div>
 
-<h1 align="center">Continue</h1>
+<h1 align="center">Comstar (Continue)</h1>
 
 <div align="center">
 

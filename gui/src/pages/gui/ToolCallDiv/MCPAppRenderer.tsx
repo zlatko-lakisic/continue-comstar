@@ -295,7 +295,7 @@ export function McpAppRenderer({
         });
       }
     } catch (err) {
-      console.error("[Continue] Failed to connect bridge to MCP App UI:", err);
+      console.error("[Comstar (Continue)] Failed to connect bridge to MCP App UI:", err);
       setError(err instanceof Error ? err : new Error(String(err)));
     }
   }, [html, csp, permissions]);

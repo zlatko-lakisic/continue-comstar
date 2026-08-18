@@ -4,8 +4,9 @@ on:
   push:
     branches: [main]
     paths:
-      - "docs/**"
-      - "docs-site/**"
+      - "docs/index.html"
+      - "docs/assets/**"
+      - ".github/workflows/docs-gh-pages.yml"
 
   workflow_dispatch:
 
@@ -24,24 +25,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-          cache-dependency-path: docs-site/package-lock.json
-
-      - name: Install dependencies
-        working-directory: docs-site
-        run: npm ci
-
-      - name: Build
-        working-directory: docs-site
-        run: npm run build
+      - name: Stage landing page
+        run: |
+          mkdir -p _site/assets
+          cp docs/index.html _site/index.html
+          cp docs/assets/hero-logo.png docs/assets/og-banner.png docs/assets/favicon.svg _site/assets/
+          touch _site/.nojekyll
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: docs-site/out
+          path: _site
 
   deploy:
     environment:

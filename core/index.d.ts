@@ -669,6 +669,8 @@ export interface LLMOptions {
   apiBase?: string;
   baseUrl?: string;
   sessionOverlay?: string;
+  /** Path to an agent YAML file or overlay folder (ao_reach). */
+  agentDefinition?: string;
   sessionId?: string;
   timeoutSeconds?: number;
   streamingEnabled?: boolean;
@@ -1725,6 +1727,7 @@ export interface JSONModelDescription {
   apiBase?: string;
   baseUrl?: string;
   sessionOverlay?: string;
+  agentDefinition?: string;
   sessionId?: string;
   timeoutSeconds?: number;
   streamingEnabled?: boolean;

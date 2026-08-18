@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>continue-comstar — Continue × COMSTAR Orchestration</title>
+  <meta name="description" content="A Continue fork that routes all AI inference through your COMSTAR agentic-orchestration daemon via AO Reach. No cloud. Full control." />
+  <meta property="og:title" content="continue-comstar" />
+  <meta property="og:description" content="Continue × COMSTAR — AI coding assistant powered by your own orchestration daemon." />
+  <meta property="og:image" content="https://zlatko-lakisic.github.io/continue-comstar/assets/og-banner.png" />
+  <meta property="og:url" content="https://zlatko-lakisic.github.io/continue-comstar/" />
+  <meta property="og:type" content="website" />
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
+  <style>
+    :root {
+      --bg:          #0d1117;
+      --surface:     #161b22;
+      --border:      #30363d;
+      --accent:      #58a6ff;
+      --accent-alt:  #3fb950;
+      --text:        #e6edf3;
+      --muted:       #8b949e;
+      --code-bg:     #1f2428;
+      --font-sans:   -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      --font-mono:   "SF Mono", "Fira Code", "Cascadia Code", Consolas, monospace;
+      --radius:      8px;
+      --max-w:       1100px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-sans);
+      line-height: 1.6;
+    }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    :focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    .wrap {
+      width: min(100% - 2.5rem, var(--max-w));
+      margin-inline: auto;
+    }
+
+    h1, h2, h3 { line-height: 1.2; margin: 0 0 0.75rem; }
+
+    h2 {
+      font-size: clamp(1.5rem, 3vw, 2rem);
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    /* —— HERO —— */
+    .hero {
+      padding: 5rem 0 4rem;
+      text-align: center;
+    }
+
+    .hero-logo {
+      width: 240px;
+      height: auto;
+      display: block;
+      margin: 0 auto 1.75rem;
+    }
+
+    .hero h1 {
+      font-size: clamp(2rem, 5vw, 3.5rem);
+      font-weight: 700;
+      letter-spacing: -0.03em;
+    }
+
+    .hero .kicker {
+      color: var(--accent);
+      font-family: var(--font-mono);
+      font-size: 0.95rem;
+      margin: 0 0 1rem;
+    }
+
+    .hero .lede {
+      font-size: 1.15rem;
+      color: var(--muted);
+      max-width: 560px;
+      margin: 0 auto 2rem;
+    }
+
+    .cta-row {
+      display: flex;
+      justify-content: center;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.7rem 1.25rem;
+      border-radius: var(--radius);
+      font-weight: 600;
+      font-size: 0.95rem;
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+      text-decoration: none;
+    }
+
+    .btn:hover { text-decoration: none; }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #0d1117;
+    }
+
+    .btn-primary:hover { background: #79b8ff; }
+
+    .btn-secondary {
+      background: transparent;
+      color: var(--text);
+      border-color: var(--border);
+    }
+
+    .btn-secondary:hover { background: var(--surface); }
+
+    /* —— SECTIONS —— */
+    section { padding: 4rem 0; }
+
+    /* —— HOW IT WORKS —— */
+    .flow {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr auto 1fr;
+      gap: 0.75rem;
+      align-items: stretch;
+    }
+
+    .flow-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+    }
+
+    .flow-box h3 {
+      font-size: 1.05rem;
+      margin-bottom: 0.85rem;
+    }
+
+    .flow-box ul {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .flow-box li + li { margin-top: 0.35rem; }
+
+    .flow-arrow {
+      display: flex;
+      align-items: center;
+      color: var(--muted);
+      font-size: 1.5rem;
+      user-select: none;
+    }
+
+    .flow-caption {
+      margin: 1.5rem 0 0;
+      text-align: center;
+      font-style: italic;
+      color: var(--muted);
+    }
+
+    /* —— FEATURES —— */
+    .cards-2 {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1rem;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+    }
+
+    .card .icon {
+      font-size: 2rem;
+      line-height: 1;
+      margin-bottom: 0.75rem;
+    }
+
+    .card h3 { font-size: 1.1rem; }
+
+    .card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    /* —— INSTALL —— */
+    .tabs {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .tab-list {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      overflow-x: auto;
+    }
+
+    .tab-list button {
+      appearance: none;
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: var(--muted);
+      font: inherit;
+      font-weight: 600;
+      padding: 0.85rem 1.25rem;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .tab-list button:hover { color: var(--text); }
+
+    .tab-list button.active {
+      color: var(--text);
+      border-bottom-color: var(--accent);
+    }
+
+    .code-block {
+      position: relative;
+      background: var(--code-bg);
+      padding: 1.25rem;
+    }
+
+    .code-block pre {
+      margin: 0;
+      overflow-x: auto;
+    }
+
+    .code-block code {
+      font-family: var(--font-mono);
+      font-size: 0.875rem;
+      color: var(--text);
+      white-space: pre;
+    }
+
+    .copy-btn {
+      position: absolute;
+      top: 0.7rem;
+      right: 0.7rem;
+      appearance: none;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      border-radius: 6px;
+      padding: 0.25rem 0.6rem;
+      font-family: var(--font-sans);
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .copy-btn:hover { color: var(--text); }
+
+    /* —— OVERLAYS —— */
+    .chip {
+      display: inline-block;
+      background: rgba(88, 166, 255, 0.15);
+      color: var(--accent);
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      padding: 0.2rem 0.5rem;
+      border-radius: 999px;
+      margin-bottom: 0.75rem;
+    }
+
+    .overlay-snippet {
+      display: block;
+      margin-top: 1.25rem;
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      color: var(--muted);
+      background: var(--code-bg);
+      padding: 0.5rem 0.7rem;
+      border-radius: 6px;
+    }
+
+    /* —— FOOTER —— */
+    footer {
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      padding: 2rem;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+
+    footer p { margin: 0 0 0.75rem; }
+
+    footer nav {
+      display: flex;
+      justify-content: center;
+      gap: 1.25rem;
+    }
+
+    @media (max-width: 768px) {
+      .flow {
+        grid-template-columns: 1fr;
+      }
+
+      .flow-arrow { display: none; }
+
+      .cards-2 {
+        grid-template-columns: 1fr;
+      }
+
+      .hero { padding: 3rem 0 2.5rem; }
+
+      section { padding: 2.5rem 0; }
+    }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <div class="wrap">
+      <img
+        class="hero-logo"
+        src="assets/hero-logo.png"
+        width="240"
+        height="240"
+        alt="continue-comstar logo: a six-point COMSTAR star joined to a Continue chevron"
+      />
+      <h1>continue-comstar</h1>
+      <p class="kicker">Continue × COMSTAR Orchestration</p>
+      <p class="lede">
+        A VS Code coding assistant that routes every AI request through your own
+        agentic-orchestration daemon. No cloud accounts. No data leaving your network.
+      </p>
+      <div class="cta-row">
+        <a class="btn btn-primary" href="#install">Install Extension</a>
+        <a class="btn btn-secondary" href="https://github.com/zlatko-lakisic/continue-comstar">View on GitHub</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section id="how-it-works">
+      <div class="wrap">
+        <h2>How it works</h2>
+        <div class="flow">
+          <article class="flow-box">
+            <h3>VS Code Editor</h3>
+            <ul>
+              <li>Continue UI</li>
+              <li>Editor context</li>
+              <li>Inline completions</li>
+            </ul>
+          </article>
+          <div class="flow-arrow" aria-hidden="true">→</div>
+          <article class="flow-box">
+            <h3>AO Reach v0.11.0</h3>
+            <ul>
+              <li>WebSocket protocol</li>
+              <li>mTLS optional</li>
+              <li>Streaming chunks</li>
+            </ul>
+          </article>
+          <div class="flow-arrow" aria-hidden="true">→</div>
+          <article class="flow-box">
+            <h3>COMSTAR Daemon</h3>
+            <ul>
+              <li>Model selection</li>
+              <li>Agent routing</li>
+              <li>Session memory</li>
+              <li>MCP tool use</li>
+            </ul>
+          </article>
+        </div>
+        <p class="flow-caption">The extension does not know which model answered, and it does not need to.</p>
+      </div>
+    </section>
+
+    <section id="features">
+      <div class="wrap">
+        <h2>Features</h2>
+        <div class="cards-2">
+          <article class="card">
+            <div class="icon" aria-hidden="true">🔒</div>
+            <h3>Private by Design</h3>
+            <p>No code sent to cloud. All routing goes only to the URL in <code>baseUrl</code>. Host on LAN; nothing leaves unless server overlays call external APIs.</p>
+          </article>
+          <article class="card">
+            <div class="icon" aria-hidden="true">🧠</div>
+            <h3>Persistent Session Memory</h3>
+            <p>SQLite knowledge base on the daemon accumulates codebase knowledge across IDE restarts. Same <code>sessionId</code> = same context.</p>
+          </article>
+          <article class="card">
+            <div class="icon" aria-hidden="true">📦</div>
+            <h3>Overlay Packs</h3>
+            <p>Ship with <code>comstar-code</code> and <code>comstar-code-review</code>. YAML on disk — edit agent personality, model selection, and tool access without touching extension code.</p>
+          </article>
+          <article class="card">
+            <div class="icon" aria-hidden="true">⚡</div>
+            <h3>Streaming First</h3>
+            <p>Thinking and assistant chunks delivered as they arrive via WebSocket. Optional mTLS for secure deployments.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="install">
+      <div class="wrap">
+        <h2>Install</h2>
+        <div class="tabs" data-tab-group>
+          <div class="tab-list" role="tablist" aria-label="Install steps">
+            <button type="button" role="tab" id="tab-clone" class="active" data-tab-btn="clone" aria-selected="true" aria-controls="panel-clone">Clone</button>
+            <button type="button" role="tab" id="tab-build" data-tab-btn="build" aria-selected="false" aria-controls="panel-build">Build</button>
+            <button type="button" role="tab" id="tab-configure" data-tab-btn="configure" aria-selected="false" aria-controls="panel-configure">Configure</button>
+          </div>
+
+          <div id="panel-clone" role="tabpanel" aria-labelledby="tab-clone" data-tab-panel="clone">
+            <div class="code-block">
+              <button type="button" class="copy-btn" data-copy>Copy</button>
+              <pre><code>git clone https://github.com/zlatko-lakisic/continue-comstar.git
+cd continue-comstar
+npm install</code></pre>
+            </div>
+          </div>
+
+          <div id="panel-build" role="tabpanel" aria-labelledby="tab-build" data-tab-panel="build" hidden>
+            <div class="code-block">
+              <button type="button" class="copy-btn" data-copy>Copy</button>
+              <pre><code>npm run build
+# Then install the .vsix via:
+code --install-extension extensions/vscode/build/continue-comstar-*.vsix
+# Or press F5 in VS Code to launch dev mode</code></pre>
+            </div>
+          </div>
+
+          <div id="panel-configure" role="tabpanel" aria-labelledby="tab-configure" data-tab-panel="configure" hidden>
+            <div class="code-block">
+              <button type="button" class="copy-btn" data-copy>Copy</button>
+              <pre><code># config.yaml — workspace root or ~/.continue/
+name: continue-comstar
+version: 0.0.1
+schema: v1
+
+models:
+  - name: COMSTAR Code
+    provider: ao_reach
+    baseUrl: wss://your-host:8765   # AO Reach endpoint
+    apiKey: $AO_REACH_TOKEN
+    sessionOverlay: comstar-code
+    timeoutSeconds: 300
+    streamingEnabled: true
+    # mtlsMaterialDir: ~/.continue-comstar/ao-mtls</code></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="overlays">
+      <div class="wrap">
+        <h2>Overlay packs</h2>
+        <div class="cards-2">
+          <article class="card">
+            <span class="chip">OVERLAY PACK</span>
+            <h3>comstar-code</h3>
+            <p>For active development. Optimized for completions, inline suggestions, and short-context reasoning. Routes to fast models via the daemon.</p>
+            <code class="overlay-snippet">sessionOverlay: "comstar-code"</code>
+          </article>
+          <article class="card">
+            <span class="chip">OVERLAY PACK</span>
+            <h3>comstar-code-review</h3>
+            <p>For PR and diff review. Optimized for longer context, explanation, and critique. Routes to higher-capacity models.</p>
+            <code class="overlay-snippet">sessionOverlay: "comstar-code-review"</code>
+          </article>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p>continue-comstar  ·  Apache-2.0  ·  Built on Continue  ·  Part of Project COMSTAR</p>
+    <nav>
+      <a href="https://github.com/zlatko-lakisic/continue-comstar">GitHub</a>
+      <a href="https://github.com/zlatko-lakisic/continue-comstar/blob/main/LICENSE">Apache-2.0 License</a>
+    </nav>
+  </footer>
+
+  <script>
+    document.querySelectorAll('[data-tab-btn]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const group = btn.closest('[data-tab-group]');
+        group.querySelectorAll('[data-tab-btn]').forEach(b => {
+          b.classList.remove('active');
+          b.setAttribute('aria-selected', 'false');
+        });
+        group.querySelectorAll('[data-tab-panel]').forEach(p => p.hidden = true);
+        btn.classList.add('active');
+        btn.setAttribute('aria-selected', 'true');
+        group.querySelector(`[data-tab-panel="${btn.dataset.tabBtn}"]`).hidden = false;
+      });
+    });
+
+    document.querySelectorAll('[data-copy]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        navigator.clipboard.writeText(btn.closest('.code-block').querySelector('code').innerText);
+        btn.textContent = 'Copied ✓';
+        setTimeout(() => btn.textContent = 'Copy', 1500);
+      });
+    });
+  </script>
+</body>
+</html>

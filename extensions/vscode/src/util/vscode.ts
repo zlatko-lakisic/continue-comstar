@@ -22,7 +22,17 @@ export function getNonce() {
 }
 
 export function getExtensionUri(): vscode.Uri {
-  return vscode.extensions.getExtension("Continue.continue")!.extensionUri;
+  // Fork is published as zlatko-lakisic.continue-comstar; keep Continue.continue
+  // as a fallback for upstream/dev hosts that still use that id.
+  const extension =
+    vscode.extensions.getExtension("zlatko-lakisic.continue-comstar") ??
+    vscode.extensions.getExtension("Continue.continue");
+  if (!extension) {
+    throw new Error(
+      "continue-comstar extension is not loaded (expected zlatko-lakisic.continue-comstar).",
+    );
+  }
+  return extension.extensionUri;
 }
 
 export function getViewColumnOfFile(
