@@ -5,8 +5,8 @@
 <a href="https://opensource.org/licenses/Apache-2.0">
   <img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" alt="Apache 2.0" />
 </a>
-<a href="https://github.com/zlatko-lakisic/agentic-orchestration-reach/releases/tag/v0.12.0">
-  <img src="https://img.shields.io/badge/AO_Reach-v0.12.0-58a6ff.svg" alt="AO Reach v0.12.0" />
+<a href="https://github.com/zlatko-lakisic/agentic-orchestration-reach/releases/tag/v0.13.0">
+  <img src="https://img.shields.io/badge/AO_Reach-v0.13.0-58a6ff.svg" alt="AO Reach v0.13.0" />
 </a>
 
 # Comstar
