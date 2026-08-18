@@ -184,12 +184,14 @@ function stockMcpLeak(frames: Record<string, unknown>[]): string | undefined {
   function createProvider(
     baseUrl: string,
     overlay = "comstar-code-review",
+    sessionSuffix = "default",
   ): AOReach {
     const provider = new AOReach({
       model: "",
       baseUrl,
       apiKey: process.env.AO_REACH_TOKEN,
       sessionOverlay: overlay,
+      sessionId: `live-contract-${sessionSuffix}-${Date.now()}`,
       workspaceName: "live-contract",
       workspaceDirs: [workspace],
       overlayRoot: overlayRoot(),
@@ -260,7 +262,7 @@ function stockMcpLeak(frames: Record<string, unknown>[]): string | undefined {
           console.warn(`skip ${target}`);
           return;
         }
-        const provider = createProvider(target);
+        const provider = createProvider(target, "comstar-code-review", "pong");
         const { transcript } = await streamChat(
           provider,
           "Reply with exactly the single word pong and nothing else.",
@@ -278,7 +280,11 @@ function stockMcpLeak(frames: Record<string, unknown>[]): string | undefined {
           console.warn(`skip ${target}`);
           return;
         }
-        const provider = createProvider(target);
+        const provider = createProvider(
+          target,
+          "comstar-code-review",
+          "review",
+        );
         const { messages, transcript } = await streamChat(
           provider,
           "Review buggy.py in this workspace. Name the bug in add().",
@@ -297,10 +303,14 @@ function stockMcpLeak(frames: Record<string, unknown>[]): string | undefined {
           console.warn(`skip ${target}`);
           return;
         }
-        const provider = createProvider(target);
+        const provider = createProvider(
+          target,
+          "comstar-code-review",
+          "fs-hello",
+        );
         const { messages, transcript } = await streamChat(
           provider,
-          "Use the filesystem tools to read hello.txt in the workspace. Reply with only the file contents, no extra words.",
+          "Call the filesystem MCP read_file tool on hello.txt. Do not guess. Reply with only the file contents.",
         );
         const types = transcript.map((f) => String(f.type || ""));
         expect(types).toContain("run_end");
@@ -315,10 +325,14 @@ function stockMcpLeak(frames: Record<string, unknown>[]): string | undefined {
           console.warn(`skip ${target}`);
           return;
         }
-        const provider = createProvider(target);
+        const provider = createProvider(
+          target,
+          "comstar-code-review",
+          "fs-big",
+        );
         const { messages, transcript } = await streamChat(
           provider,
-          "Read big.txt with filesystem tools and say whether it looks truncated.",
+          "Call the filesystem MCP read_file tool on big.txt. Say whether the result looks truncated. Do not guess.",
         );
         const blob = formatTranscript(transcript).toLowerCase();
         expect(blob).not.toContain("none or empty");
