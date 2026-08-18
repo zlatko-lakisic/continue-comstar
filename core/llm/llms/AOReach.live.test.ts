@@ -139,26 +139,43 @@ function stockMcpLeak(frames: Record<string, unknown>[]): string | undefined {
 (LIVE ? describe : describe.skip)("AOReach live against AO", () => {
   jest.setTimeout(600_000);
 
-  const mtlsDir =
+  const defaultMtlsDir =
     process.env.AO_REACH_MTLS_DIR ||
     path.join(os.homedir(), ".continue-comstar", "ao-mtls");
+
+  function mtlsDirFor(target: string): string {
+    try {
+      const host = new URL(
+        target.replace(/^wss:/i, "https:").replace(/^ws:/i, "http:"),
+      ).hostname;
+      const envName = `AO_REACH_MTLS_DIR_${host.replace(/[^A-Za-z0-9]/g, "_")}`;
+      const fromEnv = process.env[envName];
+      if (fromEnv && fs.existsSync(path.join(fromEnv, "ca.pem"))) {
+        return fromEnv;
+      }
+      const sibling = path.join(
+        os.homedir(),
+        ".continue-comstar",
+        `ao-mtls-${host}`,
+      );
+      if (fs.existsSync(path.join(sibling, "ca.pem"))) {
+        return sibling;
+      }
+    } catch {
+      // fall through to default
+    }
+    return defaultMtlsDir;
+  }
   const workspace = fs.mkdtempSync(path.join(os.tmpdir(), "ao-reach-live-"));
   const providers: AOReach[] = [];
   const transcripts: Record<string, unknown>[][] = [];
-  const reachable = new Map<string, boolean>();
+  const reachable = new Map<string, { ok: boolean; detail: string }>();
 
   beforeAll(async () => {
     if (!process.env.AO_REACH_TOKEN) {
       throw new Error(
         "AO_REACH_LIVE=1 requires AO_REACH_TOKEN in the environment.",
       );
-    }
-    for (const name of ["cert.pem", "key.pem", "ca.pem"]) {
-      if (!fs.existsSync(path.join(mtlsDir, name))) {
-        throw new Error(
-          `AO_REACH_LIVE=1 requires ${name} under ${mtlsDir} (or set AO_REACH_MTLS_DIR).`,
-        );
-      }
     }
     fs.writeFileSync(path.join(workspace, "hello.txt"), "live-contract\n");
     fs.writeFileSync(
@@ -167,10 +184,26 @@ function stockMcpLeak(frames: Record<string, unknown>[]): string | undefined {
     );
     fs.writeFileSync(path.join(workspace, "big.txt"), "Z".repeat(9000));
     for (const target of liveTargets()) {
-      const health = await probeHealth(healthUrl(target), mtlsDir);
-      reachable.set(target, health.ok);
+      const dir = mtlsDirFor(target);
+      for (const name of ["cert.pem", "key.pem", "ca.pem"]) {
+        if (!fs.existsSync(path.join(dir, name))) {
+          reachable.set(target, {
+            ok: false,
+            detail: `mTLS material missing: ${path.join(dir, name)}`,
+          });
+          break;
+        }
+      }
+      if (reachable.get(target)?.ok === false) {
+        console.warn(
+          `Skipping live target ${target}: ${reachable.get(target)?.detail}`,
+        );
+        continue;
+      }
+      const health = await probeHealth(healthUrl(target), dir);
+      reachable.set(target, health);
       if (!health.ok) {
-        console.warn(`Skipping live target ${target}: ${health.detail}`);
+        console.warn(`Live target ${target} health failed: ${health.detail}`);
       }
     }
   });
@@ -180,6 +213,16 @@ function stockMcpLeak(frames: Record<string, unknown>[]): string | undefined {
       closeProvider(provider);
     }
   });
+
+  function requireTarget(target: string) {
+    const health = reachable.get(target);
+    if (!health?.ok) {
+      throw new Error(
+        `Live target ${target} is unreachable (${health?.detail || "no probe"}). ` +
+          "Enroll mTLS for this engine (cert/key/ca) or set AO_REACH_MTLS_DIR.",
+      );
+    }
+  }
 
   function createProvider(
     baseUrl: string,
@@ -196,7 +239,7 @@ function stockMcpLeak(frames: Record<string, unknown>[]): string | undefined {
       workspaceDirs: [workspace],
       overlayRoot: overlayRoot(),
       filesystemTunnel: true,
-      mtlsMaterialDir: mtlsDir,
+      mtlsMaterialDir: mtlsDirFor(baseUrl),
       timeoutSeconds: 0,
       userName: process.env.AO_REACH_USER || "continue-comstar-live-test",
     } as LLMOptions);
@@ -258,10 +301,7 @@ function stockMcpLeak(frames: Record<string, unknown>[]): string | undefined {
   for (const target of liveTargets()) {
     describe(target, () => {
       it("registers the review overlay without stock MCP leak", async () => {
-        if (!reachable.get(target)) {
-          console.warn(`skip ${target}`);
-          return;
-        }
+        requireTarget(target);
         const provider = createProvider(target, "comstar-code-review", "pong");
         const { transcript } = await streamChat(
           provider,
@@ -276,10 +316,7 @@ function stockMcpLeak(frames: Record<string, unknown>[]): string | undefined {
       });
 
       it("reviews workspace code without empty-LLM crash or stock MCP leak", async () => {
-        if (!reachable.get(target)) {
-          console.warn(`skip ${target}`);
-          return;
-        }
+        requireTarget(target);
         const provider = createProvider(
           target,
           "comstar-code-review",
@@ -299,10 +336,7 @@ function stockMcpLeak(frames: Record<string, unknown>[]): string | undefined {
       });
 
       it("round-trips a filesystem MCP read through the session tunnel", async () => {
-        if (!reachable.get(target)) {
-          console.warn(`skip ${target}`);
-          return;
-        }
+        requireTarget(target);
         const provider = createProvider(
           target,
           "comstar-code-review",
@@ -321,10 +355,7 @@ function stockMcpLeak(frames: Record<string, unknown>[]): string | undefined {
       });
 
       it("survives an oversized filesystem read without empty-LLM crash", async () => {
-        if (!reachable.get(target)) {
-          console.warn(`skip ${target}`);
-          return;
-        }
+        requireTarget(target);
         const provider = createProvider(
           target,
           "comstar-code-review",
