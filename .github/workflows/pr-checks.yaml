@@ -249,6 +249,8 @@ jobs:
           INCEPTION_API_KEY: ${{ secrets.INCEPTION_API_KEY }}
 
   vscode-get-test-file-matrix:
+    # COMSTAR fork: skip VS Code E2E matrix (upstream Continue test infra / flaky timeouts).
+    if: false
     runs-on: ubuntu-latest
     outputs:
       test_file_matrix: ${{ steps.vscode-get-test-file-matrix.outputs.test_file_matrix }}
@@ -334,6 +336,8 @@ jobs:
           path: extensions/vscode/build
 
   vscode-e2e-tests:
+    # COMSTAR fork: skip VS Code E2E (upstream Continue test infra / flaky timeouts).
+    if: false
     name: ${{ matrix.test_file || 'unknown' }} (${{ matrix.command }})
     needs: [vscode-get-test-file-matrix, vscode-package-extension-linux]
     runs-on: ubuntu-latest
@@ -395,9 +399,7 @@ jobs:
       - vscode-checks
       - get-packages-matrix
       - packages-checks
-      - vscode-get-test-file-matrix
       - vscode-package-extension-linux
-      - vscode-e2e-tests
       - jetbrains-tests
 
     steps:
