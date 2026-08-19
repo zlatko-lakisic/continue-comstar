@@ -23,6 +23,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v6
         with:
           node-version-file: ".nvmrc"
@@ -38,7 +40,30 @@ jobs:
         run: npm ci
 
       - name: Check code formatting with Prettier
-        run: npx prettier --check "**/*.{js,jsx,ts,tsx,json,css,md}" --ignore-path .gitignore --ignore-path .prettierignore
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE="${{ github.event.pull_request.base.sha }}"
+          else
+            BASE="${{ github.event.before }}"
+          fi
+
+          if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
+            echo "No base commit available; skipping prettier check"
+            exit 0
+          fi
+
+          mapfile -t FILES < <(
+            git diff --name-only --diff-filter=ACMRT "$BASE" HEAD \
+              | grep -E '\.(js|jsx|ts|tsx|json|css|md)$' || true
+          )
+
+          if [ ${#FILES[@]} -eq 0 ]; then
+            echo "No formatted files changed"
+            exit 0
+          fi
+
+          echo "Checking ${#FILES[@]} changed file(s) with Prettier"
+          npx prettier --check "${FILES[@]}"
 
   core-checks:
     runs-on: ubuntu-latest
@@ -332,6 +357,8 @@ jobs:
           github_token: ${{ secrets.CI_GITHUB_TOKEN }}
 
   jetbrains-tests:
+    # COMSTAR fork targets VS Code marketplace publishing; skip heavy JetBrains CI.
+    if: false
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

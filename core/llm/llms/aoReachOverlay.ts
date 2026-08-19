@@ -243,7 +243,11 @@ export function resolveOverlayRoot(explicitRoot?: string): string {
     return path.resolve(process.env.AO_REACH_OVERLAY_ROOT.trim());
   }
 
-  const moduleDir = path.dirname(fileURLToPath(import.meta.url));
+  const moduleDir =
+    typeof __dirname === "undefined"
+      ? // @ts-ignore — import.meta is ESM-only; binary builds compile core as CommonJS
+        path.dirname(fileURLToPath(import.meta.url))
+      : __dirname;
   const candidates = [
     // Packaged extension: bundle is <extensionRoot>/out/extension.js and the
     // overlay packs ship at <extensionRoot>/overlays (moduleDir/../overlays).

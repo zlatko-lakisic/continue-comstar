@@ -769,6 +769,7 @@
     "yarn": "^1.22.21"
   },
   "overrides": {
+    "@types/node": "16.x",
     "vitest": {
       "@types/node": "^16.18.119"
     },
