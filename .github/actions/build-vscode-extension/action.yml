@@ -113,6 +113,8 @@ runs:
       shell: bash
       env:
         CONTINUE_VSCODE_TARGET: ${{ steps.set-target.outputs.target }}
+        # prepackage.js runs npm install again; @vscode/ripgrep postinstall needs GitHub API auth
+        GITHUB_TOKEN: ${{ inputs.github-token }}
       run: |
         cd extensions/vscode
         export CONTINUE_VSCODE_TARGET="${{ steps.set-target.outputs.target }}"
@@ -120,6 +122,8 @@ runs:
 
     - name: Re-install esbuild
       shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
       run: |
         cd extensions/vscode
         npm install -f esbuild
