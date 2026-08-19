@@ -1,6 +1,6 @@
 <div align="center">
 
-![COMSTAR](media/comstar-marketplace-banner.jpg)
+![COMSTAR](https://raw.githubusercontent.com/zlatko-lakisic/continue-comstar/main/extensions/vscode/media/comstar-marketplace-banner.jpg)
 
 <a href="https://opensource.org/licenses/Apache-2.0">
   <img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" alt="Apache 2.0" />

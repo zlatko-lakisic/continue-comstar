@@ -20,14 +20,31 @@ jobs:
       - id: check
         working-directory: .
         run: |
-          if [[ "${{ github.event.release.tag_name }}" == v1.3.*-vscode ]]; then
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "should_run=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          TAG="${{ github.event.release.tag_name }}"
+          if bash .github/scripts/release-tag-version-check.sh "$TAG" odd; then
             echo "should_run=true" >> $GITHUB_OUTPUT
           else
             echo "should_run=false" >> $GITHUB_OUTPUT
           fi
 
+  check-version:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'release'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Ensure pre-release odd minor
+        run: |
+          cd extensions/vscode
+          node scripts/versionCheckPreRelease.js
+
   build:
-    needs: check_release_name
+    needs: [check_release_name, check-version]
     if: needs.check_release_name.outputs.should_run == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ${{ matrix.os }}
     strategy:
