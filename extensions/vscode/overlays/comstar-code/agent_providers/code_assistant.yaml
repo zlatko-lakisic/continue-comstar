@@ -14,6 +14,7 @@ verbose: false
 allow_delegation: false
 mcp_providers:
   - filesystem_local
+  - terminal_local
 system_prompt: |
   You receive editor context and answer with precise working code.
   Use filesystem tools when you need to inspect or change workspace files.

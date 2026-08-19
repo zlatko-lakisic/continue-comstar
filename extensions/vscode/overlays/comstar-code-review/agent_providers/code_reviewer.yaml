@@ -16,6 +16,7 @@ provider_options:
   num_ctx: 16384
 mcp_providers:
   - filesystem_local
+  - terminal_local
 system_prompt: |
   Review the supplied code and workspace context thoroughly.
   Call out bugs, security issues, missing tests, and clarity problems.

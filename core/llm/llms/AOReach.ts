@@ -12,6 +12,7 @@ import { Logger } from "../../util/Logger.js";
 import { renderChatMessage } from "../../util/messageContent.js";
 import { BaseLLM } from "../index.js";
 import { AoReachFilesystemMcp } from "./aoReachFilesystemMcp.js";
+import { AoReachTerminalMcp } from "./aoReachTerminalMcp.js";
 import {
   assertMtlsUsesTls,
   loadReachMtlsMaterial,
@@ -90,6 +91,7 @@ class AOReach extends BaseLLM {
   private hello?: EngineFrame;
   private packed?: PackedOverlay;
   private filesystemMcp?: AoReachFilesystemMcp;
+  private terminalMcp?: AoReachTerminalMcp;
   private overlayRefreshTimer?: ReturnType<typeof setTimeout>;
   private readonly turns = new Map<string, TurnState>();
   private overlayAcked = false;
@@ -507,8 +509,10 @@ class AOReach extends BaseLLM {
 
     if (this.filesystemTunnel) {
       this.filesystemMcp = new AoReachFilesystemMcp(this.workspaceDirs);
+      this.terminalMcp = new AoReachTerminalMcp(this.workspaceDirs);
     } else {
       this.filesystemMcp = undefined;
+      this.terminalMcp = undefined;
     }
 
     this.packed = this.loadPackedOverlay();
@@ -682,11 +686,8 @@ class AOReach extends BaseLLM {
       return;
     }
     try {
-      if (!this.filesystemMcp) {
-        throw new Error(
-          "Filesystem MCP tunnel is not enabled for this session.",
-        );
-      }
+      const mcpId = String(frame.mcpId || "").trim();
+      const tunnelPath = String(frame.tunnelPath || "").trim();
       const method = String(frame.method || "POST");
       let reqPath = String(frame.path || "/mcp");
       if (reqPath === "" || reqPath === "/") {
@@ -696,12 +697,21 @@ class AOReach extends BaseLLM {
       const body = bodyBase64
         ? Buffer.from(bodyBase64, "base64")
         : Buffer.alloc(0);
-      const response = this.filesystemMcp.handleTunnelRequest({
-        method,
-        path: reqPath,
-        headers: (frame.headers as Record<string, string>) || {},
-        body,
-      });
+      const isTerminal =
+        tunnelPath === "terminal" || mcpId.endsWith("terminal_local");
+      const response = isTerminal
+        ? await this.requireTerminalMcp().handleTunnelRequest({
+            method,
+            path: reqPath,
+            headers: (frame.headers as Record<string, string>) || {},
+            body,
+          })
+        : await this.requireFilesystemMcp().handleTunnelRequest({
+            method,
+            path: reqPath,
+            headers: (frame.headers as Record<string, string>) || {},
+            body,
+          });
       if (socket.readyState === WebSocket.OPEN) {
         socket.send(
           JSON.stringify({
@@ -729,6 +739,20 @@ class AOReach extends BaseLLM {
         );
       }
     }
+  }
+
+  private requireFilesystemMcp(): AoReachFilesystemMcp {
+    if (!this.filesystemMcp) {
+      throw new Error("Filesystem MCP tunnel is not enabled for this session.");
+    }
+    return this.filesystemMcp;
+  }
+
+  private requireTerminalMcp(): AoReachTerminalMcp {
+    if (!this.terminalMcp) {
+      throw new Error("Terminal MCP tunnel is not enabled for this session.");
+    }
+    return this.terminalMcp;
   }
 
   private rejectAllTurns(error: Error): void {

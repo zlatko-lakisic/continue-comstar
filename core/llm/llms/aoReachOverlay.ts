@@ -141,6 +141,14 @@ function withFilesystemMcp(
         headers: {},
       },
     });
+    mcps.push({
+      id: "client.terminal_local",
+      description: "VS Code terminal runner (session tunnel)",
+      streamable_http: {
+        url: "tunnel://session-mcp/terminal",
+        headers: {},
+      },
+    });
   }
   return {
     agents,
