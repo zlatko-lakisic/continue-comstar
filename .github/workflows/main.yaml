@@ -126,14 +126,22 @@ jobs:
           path: vsix-artifacts
           merge-multiple: true
 
+      - name: Determine release tag
+        id: release_tag
+        run: |
+          VERSION=$(node -p "require('./extensions/vscode/package.json').version")
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "tag=v${VERSION}-vscode" >> $GITHUB_OUTPUT
+
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_name }}
+          tag_name: ${{ steps.release_tag.outputs.tag }}
+          name: VSCode Release ${{ steps.release_tag.outputs.version }}
           files: |
             vsix-artifacts/*.vsix
-          token: ${{ secrets.CI_GITHUB_TOKEN }}
-          repository: continuedev/continue
+          token: ${{ secrets.GITHUB_TOKEN }}
+          generate_release_notes: true
 
   publish:
     runs-on: ubuntu-latest
@@ -181,9 +189,15 @@ jobs:
         env:
           VSCE_STORE: file
 
-      # 4. Publish the extension to Open VSX Registry
+      # 4. Publish the extension to Open VSX Registry (optional)
       - name: Publish (Open VSX Registry)
         continue-on-error: true
+        env:
+          VSX_REGISTRY_TOKEN: ${{ secrets.VSX_REGISTRY_TOKEN }}
         run: |
+          if [ -z "$VSX_REGISTRY_TOKEN" ]; then
+            echo "VSX_REGISTRY_TOKEN not configured; skipping Open VSX publish"
+            exit 0
+          fi
           cd extensions/vscode
-          npx ovsx publish -p ${{ secrets.VSX_REGISTRY_TOKEN }} --packagePath ../../vsix-artifacts/*.vsix
+          npx ovsx publish -p "$VSX_REGISTRY_TOKEN" --packagePath ../../vsix-artifacts/*.vsix
