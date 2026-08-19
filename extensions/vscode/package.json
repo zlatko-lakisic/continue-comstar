@@ -39,15 +39,14 @@
     "Snippets"
   ],
   "keywords": [
+    "ai",
+    "continue",
     "comstar",
-    "ao reach",
-    "agentic-orchestration",
-    "chatgpt",
-    "cline",
-    "github",
+    "agentic",
+    "llm",
     "copilot",
     "claude",
-    "ai"
+    "autocomplete"
   ],
   "activationEvents": [
     "onUri",
@@ -648,6 +647,7 @@
   "scripts": {
     "esbuild-base": "node scripts/esbuild.js",
     "vscode:prepublish": "npm run esbuild-base -- --minify",
+    "vsce:prepublish": "npm run vscode:prepublish",
     "esbuild": "npm run esbuild-base -- --sourcemap",
     "esbuild-watch": "npm run esbuild-base -- --sourcemap --watch",
     "esbuild-notify": "npm run esbuild-base -- --sourcemap --notify",
@@ -665,6 +665,7 @@
     "package": "node scripts/package.js",
     "package-all": "node scripts/package-all.js",
     "package:pre-release": "node scripts/package.js --pre-release",
+    "publish:marketplace": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"& { if(-not $env:GITHUB_ACTIONS) { throw 'Azure managed identity publishing requires GitHub Actions. Run the workflow instead of calling this script locally.' }; $env:VSCE_STORE='file'; npx @vscode/vsce@2.26.1 publish --azure-credential }\"",
     "build:rust": "cargo-cp-artifact -ac sync sync.node -- cargo build --manifest-path ../../sync/Cargo.toml --message-format=json-render-diagnostics",
     "build-debug:rust": "npm run build:rust --",
     "build-release:rust": "npm run build:rust -- --release",

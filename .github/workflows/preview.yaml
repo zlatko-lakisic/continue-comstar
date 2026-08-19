@@ -125,9 +125,11 @@ jobs:
     needs:
       - build
     if: github.event_name != 'workflow_dispatch' || github.event.inputs.publish_build == 'true'
+    environment: publish-vscode-marketplace
     permissions:
       contents: write
       pull-requests: write
+      id-token: write
     steps:
       # 0. Setup git
       - name: Checkout
@@ -148,22 +150,31 @@ jobs:
           path: vsix-artifacts
           merge-multiple: true
 
-      # 2. Publish the extension to VS Code Marketplace
+      # 2. Authenticate to Azure using the workflow's OIDC token (managed identity)
+      - name: Azure login (user-assigned managed identity)
+        uses: azure/login@v3
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          allow-no-subscriptions: true
+          enable-AzPSSession: true
+
+      # 3. Publish the extension to VS Code Marketplace
       - name: Publish to VS Code Marketplace
         run: |
           cd extensions/vscode
-          npx @vscode/vsce publish --pre-release --packagePath ../../vsix-artifacts/*.vsix
+          npx @vscode/vsce@2.26.1 publish --azure-credential --pre-release --packagePath ../../vsix-artifacts/*.vsix
         env:
-          VSCE_PAT: ${{ secrets.VSCE_TOKEN }}
+          VSCE_STORE: file
 
-      # 3. Publish the extension to Open VSX Registry
+      # 4. Publish the extension to Open VSX Registry
       - name: Publish (Open VSX Registry)
         continue-on-error: true
         run: |
           cd extensions/vscode
           npx ovsx publish --pre-release -p ${{ secrets.VSX_REGISTRY_TOKEN }} --packagePath ../../vsix-artifacts/*.vsix
 
-      # 4. Create PR with version bump
+      # 5. Create PR with version bump
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:

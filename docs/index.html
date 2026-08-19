@@ -303,7 +303,7 @@
 </nav>
 
 <!-- HERO -->
-<header class="hero">
+  <header class="hero">
   <div class="hero-glow"></div>
 
   <!-- 64px animated star -->
@@ -443,7 +443,7 @@
         <div class="bc-title">Overlay Packs — Editable on Disk</div>
         <div class="bc-body">Agent definitions live as YAML files in <code style="font-family:var(--mono);font-size:0.78em;color:var(--blue)">overlays/</code>. Edit personality, model routing, and tool access without touching extension code.</div>
         <div class="bc-code"><span class="ck">sessionOverlay</span>: <span class="cs">"comstar-code"</span><br><span class="ck">sessionOverlay</span>: <span class="cs">"comstar-code-review"</span></div>
-      </div>
+        </div>
       <div class="bento-card bc-5">
         <div class="bc-icon blue">🛠</div>
         <div class="bc-title">MCP Tool Integration</div>
@@ -451,8 +451,8 @@
         <div class="bc-code"><span class="ck">AGENTIC_SERVE_MCP_TUNNEL</span>=<span class="cv">1</span><br><span class="ck">AGENTIC_SERVE_SESSION_OVERLAY</span>=<span class="cv">1</span></div>
       </div>
     </div>
-  </div>
-</section>
+      </div>
+    </section>
 
 <!-- INSTALL -->
 <section id="install" class="install-section">
@@ -534,14 +534,14 @@
     <span class="cc"># mtlsMaterialDir: "/path/to/certs"</span></code></pre>
             </div>
           </div>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
-  </div>
-</section>
+    </section>
 
 <!-- OVERLAYS -->
-<section id="overlays">
+    <section id="overlays">
   <div class="container">
     <div class="section-label">Overlay Packs</div>
     <h2>Two modes, one daemon</h2>
@@ -587,12 +587,12 @@
       </div>
     </div>
   </div>
-</footer>
+  </footer>
 
-<script>
+  <script>
   // Tab switcher
   document.querySelectorAll('.tab-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
+      btn.addEventListener('click', () => {
       const panel = btn.closest('.code-panel');
       panel.querySelectorAll('.tab-btn').forEach(b => { b.classList.remove('active'); b.setAttribute('aria-selected','false'); });
       panel.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
@@ -627,7 +627,7 @@
     });
   }, { rootMargin: '-40% 0px -55% 0px' });
   document.querySelectorAll('section[id]').forEach(s => obs.observe(s));
-</script>
+  </script>
 
 </body>
 </html>

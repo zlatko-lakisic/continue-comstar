@@ -1,0 +1,30 @@
+name: Determine Marketplace Identity
+
+on:
+  workflow_dispatch:
+
+jobs:
+  identity:
+    name: Get Marketplace member id for the managed identity
+    runs-on: ubuntu-latest
+    environment: publish-vscode-marketplace
+    permissions:
+      id-token: write # required for OIDC token minting (used by azure/login)
+    steps:
+      - name: Azure login (user-assigned managed identity)
+        uses: azure/login@v3
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          allow-no-subscriptions: true
+          enable-AzPSSession: true
+
+      - name: Fetch Marketplace identity id
+        run: |
+          ID=$(az rest \
+            -u https://app.vssps.visualstudio.com/_apis/profile/profiles/me \
+            --resource 499b84ac-1321-427f-aa17-267ca6975798 \
+            | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")
+          echo "Marketplace identity id: $ID"
+          echo "marketplace_identity_id=$ID" >> $GITHUB_OUTPUT
+

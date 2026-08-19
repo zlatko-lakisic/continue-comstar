@@ -167,6 +167,9 @@ extensions/.continue-debug/
 
 *.vsix
 
+# VS Code Marketplace publish credentials — never commit
+.env.publish
+
 # intellij module library files
 *.iml
 

@@ -6,10 +6,10 @@ This document catalogs all build dependencies, secrets, and environment variable
 
 ## VS Code Extension
 
-| Secret               | Purpose                                                                             | Referenced In               |
-| -------------------- | ----------------------------------------------------------------------------------- | --------------------------- |
-| `VSCE_TOKEN`         | Personal access token for publishing to the VS Code Marketplace (set as `VSCE_PAT`) | `main.yaml`, `preview.yaml` |
-| `VSX_REGISTRY_TOKEN` | Token for publishing to the Open VSX Registry                                       | `main.yaml`, `preview.yaml` |
+| Secret               | Purpose                                                                                                                                                 | Referenced In               |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------- |
+| `VSCE_TOKEN`         | Legacy personal access token for publishing to the VS Code Marketplace (NOT used when publishing via Entra/Azure managed identity `--azure-credential`) | `main.yaml`, `preview.yaml` |
+| `VSX_REGISTRY_TOKEN` | Token for publishing to the Open VSX Registry                                                                                                           | `main.yaml`, `preview.yaml` |
 
 ---
 
