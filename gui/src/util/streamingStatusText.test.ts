@@ -5,6 +5,8 @@ import {
   latestStreamingStatusText,
   looksLikeAoProgress,
   mergeThinkingContent,
+  sameProgressFamily,
+  sanitizeThinkingLine,
   thinkingLogLines,
   truncateStatusText,
 } from "./streamingStatusText";
@@ -73,5 +75,56 @@ describe("streamingStatusText", () => {
     expect(mergeThinkingContent("I think we", " should inspect")).toBe(
       "I think we should inspect",
     );
+  });
+
+  it("drops Model input and system-prompt junk from thinking lines", () => {
+    expect(
+      sanitizeThinkingLine(
+        "Model input (qwen3.6:27b): Current Task: <system>…",
+      ),
+    ).toBeNull();
+    expect(
+      sanitizeThinkingLine("Current Task: <system>You are a helper</system>"),
+    ).toBeNull();
+    expect(
+      sanitizeThinkingLine(
+        "Follow <important_rules> and obey tools</important_rules>",
+      ),
+    ).toBeNull();
+    expect(sanitizeThinkingLine("Checking git status…")).toBe(
+      "Checking git status…",
+    );
+  });
+
+  it("maps agent Thought and Action prefixes to cleaner labels", () => {
+    expect(
+      sanitizeThinkingLine("(agent) Thought: re-staging package.json"),
+    ).toBe("Thought: re-staging package.json");
+    expect(sanitizeThinkingLine("(agent) Action: git add package.json")).toBe(
+      "Action: git add package.json",
+    );
+  });
+
+  it("treats Consulting and Still working with as one progress family", () => {
+    expect(
+      sameProgressFamily(
+        "Consulting qwen3.6:27b…",
+        "Still working with qwen3.6:27b…",
+      ),
+    ).toBe(true);
+    expect(
+      sameProgressFamily(
+        "Consulting qwen3.6:27b… (2m 00s)",
+        "Still working with qwen3.6:27b… (2m 10s)",
+      ),
+    ).toBe(true);
+    expect(
+      thinkingLogLines(
+        [
+          "Consulting qwen3.6:27b…",
+          "Still working with qwen3.6:27b… (1m 40s)",
+        ].join("\n"),
+      ),
+    ).toEqual(["Still working with qwen3.6:27b… (1m 40s)"]);
   });
 });

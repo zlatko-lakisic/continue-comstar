@@ -11,6 +11,7 @@ import { Button } from "../../ui";
 import {
   lastNonEmptyLine,
   looksLikeAoProgress,
+  sanitizeThinkingLine,
   thinkingLogLines,
 } from "../../../util/streamingStatusText";
 
@@ -53,7 +54,9 @@ function ThinkingBlockPeek({
   const [elapsedTime, setElapsedTime] = useState<string>("");
   const logRef = useRef<HTMLDivElement>(null);
   const progressLabel = lastNonEmptyLine(content);
-  const logLines = thinkingLogLines(content);
+  const logLines = thinkingLogLines(content)
+    .map(sanitizeThinkingLine)
+    .filter((line): line is string => line !== null);
   const showAoLog = looksLikeAoProgress(content);
 
   const duplicateRedactedThinkingBlock =

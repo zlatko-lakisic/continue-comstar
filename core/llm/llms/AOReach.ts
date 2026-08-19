@@ -65,6 +65,8 @@ interface TurnState {
   /** Re-arms the idle watchdog; AO liveness is measured from the last frame. */
   onActivity?: () => void;
   lastProgressLine?: string;
+  /** Normalized key for heartbeat in-place updates (matches gui progressLineKey). */
+  lastProgressLineKey?: string;
 }
 
 class AOReach extends BaseLLM {
@@ -826,6 +828,28 @@ class AOReach extends BaseLLM {
     );
   }
 
+  /** Strip elapsed / percent so heartbeat updates compare as the same status line. */
+  private progressLineKey(line: string): string {
+    return String(line || "")
+      .trim()
+      .replace(/\(\s*(?:\d+\s*m(?:in)?s?\s*)?\d+\s*s(?:ec)?s?\s*\)/gi, "")
+      .replace(/\d+\s*%/g, "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .toLowerCase();
+  }
+
+  /** Format elapsedMs from AO heartbeat frames for the thinking log. */
+  private formatElapsed(elapsedMs: number): string {
+    const total = Math.max(0, Math.floor(elapsedMs / 1000));
+    if (total < 60) {
+      return `${total}s`;
+    }
+    const minutes = Math.floor(total / 60);
+    const seconds = total % 60;
+    return `${minutes}m ${seconds.toString().padStart(2, "0")}s`;
+  }
+
   /**
    * Render an AO `status` frame as a progress line for the thinking pane.
    * Returns undefined for phases with nothing new to say, so the pane shows
@@ -850,11 +874,35 @@ class AOReach extends BaseLLM {
         ? `[${step}/${stepCount}] `
         : "";
     const line = `${prefix}${message}`;
-    if (line === state.lastProgressLine) {
+    const isHeartbeat = frame.heartbeat === true;
+    const elapsedMs =
+      typeof frame.elapsedMs === "number" && Number.isFinite(frame.elapsedMs)
+        ? frame.elapsedMs
+        : undefined;
+    const displayLine =
+      isHeartbeat && elapsedMs !== undefined
+        ? `${line} (${this.formatElapsed(elapsedMs)})`
+        : line;
+    const lineKey = this.progressLineKey(line);
+
+    if (!lineKey) {
       return undefined;
     }
-    state.lastProgressLine = line;
-    return `${line}\n`;
+
+    const prevLine = state.lastProgressLine;
+    const prevKey = state.lastProgressLineKey ?? "";
+
+    if (prevKey && lineKey === prevKey) {
+      if (displayLine === prevLine) {
+        return undefined;
+      }
+      state.lastProgressLine = displayLine;
+      return `${displayLine}\n`;
+    }
+
+    state.lastProgressLine = displayLine;
+    state.lastProgressLineKey = lineKey;
+    return `${displayLine}\n`;
   }
 
   protected async *_streamChat(

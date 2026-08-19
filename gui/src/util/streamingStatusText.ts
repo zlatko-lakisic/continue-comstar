@@ -14,10 +14,55 @@ export function progressLineKey(line: string): string {
     .toLowerCase();
 }
 
+/** Model name shared by Consulting / Still working with progress lines. */
+function llmConsultModelKey(line: string): string | undefined {
+  const key = progressLineKey(line);
+  const consulting = key.match(/^consulting\s+(.+?)(?:…|\.\.\.)?\s*$/);
+  if (consulting) {
+    return consulting[1].trim();
+  }
+  const continuing = key.match(/^still working with\s+(.+?)(?:…|\.\.\.)?\s*$/);
+  if (continuing) {
+    return continuing[1].trim();
+  }
+  return undefined;
+}
+
 export function sameProgressFamily(a: string, b: string): boolean {
   const left = progressLineKey(a);
   const right = progressLineKey(b);
-  return Boolean(left) && left === right;
+  if (Boolean(left) && left === right) {
+    return true;
+  }
+  const leftModel = llmConsultModelKey(a);
+  const rightModel = llmConsultModelKey(b);
+  return Boolean(leftModel) && leftModel === rightModel;
+}
+
+/** Drop debug junk and normalize agent reasoning lines for the AO thinking log. */
+export function sanitizeThinkingLine(line: string): string | null {
+  const trimmed = String(line || "").trim();
+  if (!trimmed) {
+    return null;
+  }
+  if (/Model input\s*\(/i.test(trimmed)) {
+    return null;
+  }
+  if (/<important_rules>/i.test(trimmed)) {
+    return null;
+  }
+  if (/Current Task:\s*<system>/i.test(trimmed)) {
+    return null;
+  }
+  const thoughtMatch = trimmed.match(/^\(agent\)\s*Thought:\s*(.+)$/i);
+  if (thoughtMatch) {
+    return `Thought: ${thoughtMatch[1].trim()}`;
+  }
+  const actionMatch = trimmed.match(/^\(agent\)\s*Action:\s*(.+)$/i);
+  if (actionMatch) {
+    return `Action: ${actionMatch[1].trim()}`;
+  }
+  return trimmed;
 }
 
 export function thinkingLogLines(content: string): string[] {
@@ -73,6 +118,13 @@ export function looksLikeAoProgress(content: string): boolean {
     text.includes("connecting") ||
     text.includes("warming") ||
     text.includes("working through") ||
+    text.includes("consulting") ||
+    text.includes("still working with") ||
+    text.includes("running:") ||
+    text.includes("reading:") ||
+    text.includes("updating:") ||
+    text.startsWith("thought:") ||
+    text.startsWith("action:") ||
     /\d+\s*%/.test(text)
   );
 }
