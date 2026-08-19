@@ -22,7 +22,7 @@ jobs:
       - name: Fetch Marketplace identity id
         run: |
           ID=$(az rest \
-            -u https://app.vssps.visualstudio.com/_apis/profile/profiles/me \
+            -u https://app.vssps.visualstudio.com/_apis/profile/profiles/me?api-version=5.1 \
             --resource 499b84ac-1321-427f-aa17-267ca6975798 \
             | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")
           echo "Marketplace identity id: $ID"
