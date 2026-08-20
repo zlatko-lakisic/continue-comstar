@@ -70,6 +70,15 @@ models:
     sessionId: continue-comstar-review
     timeoutSeconds: 300
     streamingEnabled: true
+
+  - name: COMSTAR Git
+    provider: ao_reach
+    baseUrl: wss://ao.lan:8765
+    apiKey: $AO_REACH_TOKEN
+    sessionOverlay: comstar-git
+    sessionId: continue-comstar-git
+    timeoutSeconds: 300
+    streamingEnabled: true
 ```
 
 | Field              | Meaning                                                                                                                                  |
@@ -128,6 +137,8 @@ mcp_providers:
 system_prompt: |
   You receive editor context and answer with precise working code.
 ```
+
+Shipped packs: `comstar-code` (coding), `comstar-code-review` (PR/diff review), and `comstar-git` — git and release engineering for this repository: upstream fork sync, commit and PR hygiene, `v1.3.x-vscode` release tagging, worktrees, and recovery. Selected with `sessionOverlay: comstar-git`.
 
 The same overlay directory can contain a `documentation_lookup` agent with access to the project documentation source. Model choice, agent personality, tool access, verbosity, and response length all live in this overlay, not in the extension configuration.
 

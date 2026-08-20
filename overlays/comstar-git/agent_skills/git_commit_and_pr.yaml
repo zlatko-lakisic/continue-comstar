@@ -1,0 +1,146 @@
+id: git_commit_and_pr
+name: Commit and pull request hygiene
+description: >
+  Stage, commit, branch and open pull requests in continue-comstar the way the
+  repository actually expects. Use when asked to commit changes, write a commit
+  message, create a branch, open a PR, fix a failing pre-commit hook, or split
+  a large change into reviewable commits.
+role: Contributor working inside the continue-comstar branching and hook setup
+goal: >
+  Produce focused commits that pass the pre-commit hook and PR checks on the
+  first attempt, with messages that match the repository's existing history
+mcp_providers:
+  - filesystem_local
+  - terminal_local
+instructions: |
+  ## Branching
+
+  `main` is the only permanent branch and is the PR target. Branch from an
+  up-to-date main:
+
+      git switch main && git pull --ff-only origin main
+      git switch -c <name>
+
+  CONTRIBUTING.md documents `123-my-feature-branch` — issue number first, then
+  a short slug. Where there is no issue, the fork's own history uses plain
+  descriptive slugs. Either is acceptable; an issue number is better when one
+  exists because it links the branch to the discussion.
+
+  ## The pre-commit hook
+
+  `.husky/pre-commit` runs `npx lint-staged`, which runs
+  `prettier --write` over staged `*.{js,jsx,ts,tsx,json,css,md}`. Consequences
+  that surprise people:
+
+  - Prettier **rewrites files during the commit**. The commit contains the
+    formatted version, but your working tree and your editor buffers now differ
+    from what you staged. Re-read a file after committing before editing it
+    again.
+  - Only *staged* files are formatted. `git add -p` a subset of a file and the
+    unstaged remainder stays unformatted, so the next commit reformats lines
+    you did not touch. Format the whole file first if you are staging in hunks:
+
+        npx prettier --write <path>
+
+  - The hook needs node from `.nvmrc` (v20.20.1). A committing shell on a
+    different node major can fail the hook with a module error that looks like
+    a lint failure. `node -v` before diagnosing anything else.
+  - `git commit --no-verify` skips it. That is legitimate for a work-in-progress
+    commit you intend to squash, and illegitimate for anything you push,
+    because `format:check` runs in CI and will fail the PR.
+
+  Run the repository-wide check yourself before pushing:
+
+      npm run format:check
+
+  ## Commit messages
+
+  Match the existing history. `git log --oneline -30` shows the convention:
+
+    Expose terminal_local tunnel for AO Reach sessions
+    Resolve relative filesystem MCP paths against the workspace allowlist.
+    Keep COMSTAR overlay runs inside the 16k Ollama budget.
+    Bump VSIX to 1.3.47 and pin AO Reach v0.13.0.
+
+  Sentence case, imperative mood, one line, describing effect rather than
+  mechanism. Conventional-commit prefixes appear only on dependabot PRs
+  (`chore(deps): bump ...`) — do not adopt them for hand-written commits, it
+  would make the history inconsistent with itself.
+
+  A body is worth writing when the change encodes a decision that the diff does
+  not explain. Separate it from the subject with a blank line. Reference the
+  AO Reach version or protocol frame when the change is protocol-visible,
+  because that is what a future bisect will be searching for.
+
+  ## What belongs in one commit
+
+  The monorepo makes it easy to accidentally commit generated output.
+
+  - `extensions/vscode/overlays/` is a **committed build artifact**.
+    `extensions/vscode/scripts/prepackage.js` copies the root `overlays/` over
+    it during packaging. Edit `overlays/` — the root one — and mirror the
+    change into `extensions/vscode/overlays/` in the same commit. Editing the
+    extension copy alone is silently reverted at the next package. Verify with:
+
+        diff -r overlays extensions/vscode/overlays
+
+  - `package-lock.json` files change constantly and at four levels (root,
+    core, gui, extensions/vscode, packages/*). A lock change belongs in the
+    commit that changed the dependency, and nowhere else. `git add -p` will
+    not help you here; check `git status` for locks you did not mean to touch.
+
+  - `*.vsix` and `.env.publish` are gitignored. If either shows up in
+    `git status`, the ignore rule was bypassed — do not `-f` it in.
+
+  - A version bump in `extensions/vscode/package.json` is a release action, not
+    a feature action. Keep it out of feature commits.
+
+  ## Staging
+
+  Review before you stage, every time:
+
+      git diff
+      git add -p
+      git diff --cached
+      git status --short
+
+  `git add -A` from the repository root in this monorepo will pick up build
+  output from whichever package you last built. Prefer explicit paths.
+
+  ## Pull requests
+
+  CONTRIBUTING.md's expectations, which the PR template enforces:
+
+  - One concern per PR. Unrelated fixes are separate PRs.
+  - Tests updated or added for new behaviour. AO Reach changes have three
+    tiers: `AOReach.test.ts` (jest, unit), `AOReach.protocol.vitest.ts`
+    (vitest, against the mock engine), `AOReach.live.test.ts` (gated on
+    AO_REACH_LIVE=1). New protocol behaviour needs at least the first two.
+  - Docs in `docs/` updated when behaviour changes.
+  - A screenshot or short recording for user-visible features.
+  - Target `main`.
+
+  Open it with the CLI once the branch is pushed:
+
+      git push -u origin <branch>
+      gh pr create --base main --fill
+
+  Then watch the checks. `pr-checks.yaml`, `main-build.yaml` and
+  `pr-build-upload-vsix.yaml` all run; the last one produces an installable
+  VSIX artifact, which is the fastest way to hand someone a build to try.
+
+  ## Fixing up
+
+  Before the branch is pushed, amend and rewrite freely:
+
+      git commit --amend
+      git rebase -i main
+
+  After it is pushed and someone has reviewed it, prefer additional commits so
+  review comments stay anchored, and squash at merge time. If you must rewrite
+  a pushed branch:
+
+      git push --force-with-lease
+
+  `--force-with-lease` refuses to overwrite commits you have not seen.
+  Plain `--force` does not. Never use plain `--force` on this repository.

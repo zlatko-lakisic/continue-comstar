@@ -40,13 +40,13 @@ models:
     streamingEnabled: true
 ```
 
-| Field             | Meaning                                                                    |
-| ----------------- | -------------------------------------------------------------------------- |
-| `baseUrl`         | Engine URL (`wss://`, `ws://`, `https://`, or `http://`)                   |
-| `apiKey`          | AO Reach token                                                             |
-| `sessionOverlay`  | Shipped pack under `overlays/` (`comstar-code`, `comstar-code-review`)     |
-| `agentDefinition` | Path to your own agent YAML or overlay folder (overrides `sessionOverlay`) |
-| `timeoutSeconds`  | Seconds of silence from AO before giving up (`0` waits forever)            |
+| Field             | Meaning                                                                               |
+| ----------------- | ------------------------------------------------------------------------------------- |
+| `baseUrl`         | Engine URL (`wss://`, `ws://`, `https://`, or `http://`)                              |
+| `apiKey`          | AO Reach token                                                                        |
+| `sessionOverlay`  | Shipped pack under `overlays/` (`comstar-code`, `comstar-code-review`, `comstar-git`) |
+| `agentDefinition` | Path to your own agent YAML or overlay folder (overrides `sessionOverlay`)            |
+| `timeoutSeconds`  | Seconds of silence from AO before giving up (`0` waits forever)                       |
 
 Docs and install: [continue-comstar on GitHub](https://github.com/zlatko-lakisic/continue-comstar).
 

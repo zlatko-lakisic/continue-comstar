@@ -1,0 +1,147 @@
+id: git_worktrees
+name: Worktrees on a large monorepo
+description: >
+  Create, populate and tear down git worktrees for continue-comstar, using
+  copy-on-write to avoid reinstalling a multi-gigabyte node_modules per branch.
+  Use when asked to work on two branches at once, set up a worktree, review a
+  PR without stashing, run a long build while continuing to edit, or clean up
+  stale worktrees.
+role: Developer running parallel checkouts of a large npm monorepo
+goal: >
+  A second working checkout that builds immediately, without a fresh npm
+  install and without duplicating gigabytes on disk
+mcp_providers:
+  - filesystem_local
+  - terminal_local
+instructions: |
+  ## Why worktrees here specifically
+
+  This repository is ~183 MiB of git objects and ~3000 tracked files, but the
+  expensive part is what git does not track: node_modules at the root and in
+  core/, gui/, extensions/vscode/, binary/ and every package under packages/,
+  plus core/dist and the per-package dist/out directories. A fresh clone plus
+  install is minutes; a worktree plus a copy-on-write clone of those
+  directories is seconds.
+
+  Stashing is the alternative and it is worse for anything long-lived: a stash
+  does not survive a branch switch that touches package-lock.json without a
+  reinstall, and it hides work in a place nobody looks.
+
+  ## What to copy
+
+  `worktree-config.yaml` at the repository root is the manifest. It is not read
+  by git — it documents what a worktree needs and is consumed by tooling:
+
+      cowCopyTargets:        # large, copy-on-write
+        node_modules
+        app/node_modules
+        core/node_modules
+        core/dist
+        extensions/*/node_modules
+        packages/*/node_modules
+        packages/*/dist
+        packages/*/out
+
+      regularCopyTargets:    # small, plain copy
+        .env
+        core/.env
+
+  The `.env` files matter and are easy to forget — they are gitignored, so a
+  new worktree has none, and the failure mode is a build that runs and then
+  behaves wrongly rather than one that fails loudly.
+
+  ## Creating one
+
+      git worktree add ../ccs-<slug> -b <branch>
+
+  Place worktrees as siblings of the repository, never inside it. A worktree
+  under the repo root gets walked by prettier, eslint, tsc and the packaging
+  scripts, and will produce baffling duplicate-file errors.
+
+  To check out an existing branch instead of creating one:
+
+      git worktree add ../ccs-<slug> <existing-branch>
+
+  A branch can only be checked out in one worktree at a time. Git will refuse
+  and name the worktree already holding it — that message is the answer, not
+  an error to work around.
+
+  For a PR review:
+
+      gh pr checkout <n> --branch pr-<n>          # in the main checkout, then
+      git worktree add ../ccs-pr-<n> pr-<n>
+
+  ## Populating it
+
+  Copy-on-write, so the copy is near-instant and shares blocks until written:
+
+      # macOS (APFS)
+      cp -c -R node_modules ../ccs-<slug>/node_modules
+
+      # Linux (btrfs / xfs with reflink)
+      cp -a --reflink=auto node_modules ../ccs-<slug>/node_modules
+
+      # Windows (ReFS, dev drive) — falls back to a real copy on NTFS
+      robocopy node_modules ..\ccs-<slug>\node_modules /E /J
+
+  Repeat for each entry in cowCopyTargets, then plain-copy the .env files.
+  Where reflink is unavailable, a symlink is a workable substitute for
+  node_modules specifically, but not for dist/out — those get written during a
+  build and a symlink would have both worktrees writing the same output.
+
+  After copying, reconcile the lockfile rather than trusting the copy:
+
+      cd ../ccs-<slug> && npm install
+
+  npm will no-op if the branch has the same dependencies, and will fix things
+  up if it does not. This is much cheaper than a cold install.
+
+  ## Listing and pruning
+
+      git worktree list
+      git worktree list --porcelain
+
+  Deleting a worktree directory with `rm -rf` leaves git's administrative
+  record behind, and git will keep refusing to check that branch out anywhere
+  else. Remove properly:
+
+      git worktree remove ../ccs-<slug>
+      git worktree remove --force ../ccs-<slug>   # if the tree is dirty
+
+  If a directory was already deleted by hand:
+
+      git worktree prune
+      git worktree prune -n     # dry run first
+
+  ## Locking
+
+  A worktree on removable or network storage should be locked so `prune` does
+  not reclaim it while the volume is detached:
+
+      git worktree lock ../ccs-<slug> --reason "external drive"
+      git worktree unlock ../ccs-<slug>
+
+  ## Things that catch people
+
+  - Worktrees share one object database and one set of refs. A `git gc` or a
+    branch deletion in any worktree affects all of them.
+  - `.git` in a worktree is a *file* containing a gitdir pointer, not a
+    directory. Tools that stat for a `.git` directory will decide the worktree
+    is not a repository. Anything using libgit2 or a modern git handles it.
+  - Hooks are shared from the main repository's `.git/hooks`, so the husky
+    pre-commit hook runs in worktrees too — but `npx lint-staged` resolves
+    from the worktree's own node_modules. A worktree without node_modules
+    copied in will fail every commit with a confusing module error.
+  - Moving a worktree directory breaks its pointer. Use
+    `git worktree move <from> <to>` rather than `mv`.
+  - `git clean -fdx` inside a worktree deletes the copied node_modules, which
+    is exactly the thing the worktree existed to avoid. Scope it.
+
+  ## Tearing down at the end
+
+      cd <main repo>
+      git worktree remove ../ccs-<slug>
+      git branch -d <branch>        # -d, not -D: refuses if unmerged
+
+  `-d` failing is information — the branch has commits that are not in main.
+  Verify them before reaching for `-D`.

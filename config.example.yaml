@@ -25,6 +25,16 @@ models:
     streamingEnabled: true
     # agentDefinition: ~/continue-comstar/overlays/comstar-code-review/agent_providers/code_reviewer.yaml
 
+  # Git / release engineering — overlays/comstar-git
+  - name: COMSTAR Git
+    provider: ao_reach
+    baseUrl: wss://ao.lan:8765
+    apiKey: $AO_REACH_TOKEN
+    sessionOverlay: comstar-git
+    sessionId: continue-comstar-git
+    timeoutSeconds: 0
+    streamingEnabled: true
+
 # Session IDs are derived from workspace name by default.
 # To pin a session explicitly:
 #   sessionId: comstar-zlatko-global

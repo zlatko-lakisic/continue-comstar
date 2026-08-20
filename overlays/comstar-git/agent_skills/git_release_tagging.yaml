@@ -1,0 +1,170 @@
+id: git_release_tagging
+name: Release tagging and version bumps
+description: >
+  Cut a pre-release or stable release of the continue-comstar VS Code
+  extension: bump the version, create the v<version>-vscode tag, and trigger
+  the right GitHub Actions workflow. Use when asked to cut a release, tag a
+  version, publish to the marketplace, bump the VSIX version, or work out why
+  a release workflow did not run.
+role: Release engineer for the continue-comstar VS Code extension
+goal: >
+  Produce a tag and GitHub release that actually triggers the intended publish
+  workflow and ships a correctly versioned VSIX
+mcp_providers:
+  - filesystem_local
+  - terminal_local
+instructions: |
+  ## The model
+
+  The repository follows releaseflow.org: one permanent branch, `main`, and
+  releases cut as tags on it. Nothing is branched for a release. Hotfixes
+  branch *from the release tag*, not from main.
+
+  The version of record is `extensions/vscode/package.json` → `version`
+  (currently 1.3.49, publisher `zlatko-lakisic`, name `continue-comstar`).
+  The tag is that version with a `v` prefix and a `-vscode` suffix:
+
+      1.3.50  →  v1.3.50-vscode
+
+  The root `package.json` has no version field and is not involved.
+
+  ## What actually triggers a publish
+
+  Publishing is **not** triggered by pushing a tag. Both publish workflows fire
+  on GitHub *release* events, and then gate on the tag name:
+
+    .github/workflows/preview.yaml   on: release: [prereleased]
+                                     gate: tag == v1.3.*-vscode
+    .github/workflows/main.yaml      on: release: [released]
+                                     gate: tag == v1.2.*-vscode
+
+  So a tag alone does nothing. A GitHub release must be created from it, and
+  marked pre-release or full release accordingly.
+
+  **Known drift, check this before every release.** The repository is on the
+  1.3/1.4 line but `main.yaml` still gates stable releases on `v1.2.*-vscode`,
+  and the existing `v1.4.0-vscode` tag matches neither gate. A 1.4.x release
+  will be silently skipped by both workflows — the job runs, the gate evaluates
+  false, nothing publishes, and no error appears. If a release "succeeded" but
+  the marketplace did not update, read the `check_release_name` step's output
+  first. Fixing the gate patterns is a prerequisite for releasing off 1.4.
+
+  ## Cutting a pre-release
+
+  The supported path is the `vscode-prerelease.yml` workflow, which does the
+  bump, commit, tag and release for you:
+
+      gh workflow run "VSCode Pre-release"
+      # optional inputs: main_commit_sha, prerelease_version
+
+  With no inputs it takes HEAD of main and auto-increments the patch version.
+  Prefer this over doing it by hand — it keeps package.json, the commit, the
+  tag and the release in agreement.
+
+  By hand, when you need control:
+
+      git switch main && git pull --ff-only origin main
+      cd extensions/vscode && npm version 1.3.50 --no-git-tag-version && cd -
+      git add extensions/vscode/package.json extensions/vscode/package-lock.json
+      git commit -m "Bump VSIX to 1.3.50"
+      git push origin main
+      git tag -a v1.3.50-vscode -m "v1.3.50-vscode"
+      git push origin v1.3.50-vscode
+      gh release create v1.3.50-vscode --generate-notes --prerelease \
+        --title v1.3.50-vscode
+
+  `npm version --no-git-tag-version` is deliberate: npm's own tagging would
+  create a `v1.3.50` tag without the `-vscode` suffix, which no workflow
+  recognises.
+
+  Annotate tags with `-a`. Lightweight tags carry no author or date, and
+  `git describe` treats them differently.
+
+  ## Cutting a stable release
+
+  Same shape, but the release is published rather than pre-released, which
+  fires `main.yaml` instead of `preview.yaml`:
+
+      gh release create v1.2.30-vscode --generate-notes --title v1.2.30-vscode
+
+  Check the gate pattern in `main.yaml` matches the version line you are on
+  before doing this.
+
+  ## Hotfixing a released version
+
+  Branch from the tag, not from main. Main has moved on and you do not want its
+  unreleased changes in a hotfix:
+
+      git switch -c hotfix/1.3.49-mtls v1.3.49-vscode
+      # fix, commit
+      cd extensions/vscode && npm version 1.3.50 --no-git-tag-version && cd -
+      git commit -am "Bump VSIX to 1.3.50"
+      git tag -a v1.3.50-vscode -m "v1.3.50-vscode"
+      git push origin hotfix/1.3.49-mtls v1.3.50-vscode
+
+  Then cherry-pick the fix forward onto main so it is not lost at the next
+  release:
+
+      git switch main
+      git cherry-pick <fix-sha>
+
+  ## Pre-release checks
+
+  Before tagging, confirm the things that only break at package time:
+
+      npm install
+      npm run build
+      diff -r overlays extensions/vscode/overlays
+
+  `prepackage.js` runs `validateFilesPresent` over a hard-coded list that
+  includes:
+
+      overlays/comstar-code/agent_providers/code_assistant.yaml
+      overlays/comstar-code-review/agent_providers/code_reviewer.yaml
+
+  Any overlay pack that must ship in the VSIX needs an entry in that list, or
+  it will be absent from the package with no build failure. Adding a new pack
+  is therefore a two-file change: the pack itself, and prepackage.js.
+
+  Also confirm the AO Reach version pin in `README.md` matches what the
+  provider actually speaks. The fork's history shows these being bumped
+  together ("Bump VSIX to 1.3.47 and pin AO Reach v0.13.0") — a release that
+  changes protocol behaviour without moving the documented pin will mislead
+  whoever debugs it next.
+
+  ## Marketplace credentials
+
+  Publishing uses Azure managed identity via
+  `.github/workflows/marketplace-identity.yml`, with client and tenant IDs
+  supplied as repository secrets. Locally, `.env.publish` holds `VSCE_PAT` and
+  `VSCE_PUBLISHER` and is gitignored. Never commit it, never echo it into logs,
+  and never pass a PAT on a command line that will land in shell history.
+  Azure DevOps global PATs are retired on 1 December 2026; the managed-identity
+  path is the one that survives that date.
+
+  ## Diagnosing a release that did nothing
+
+  In order:
+
+  1. `gh run list --workflow=preview.yaml --limit 5` — did the workflow start?
+     If not, the release event never fired: the tag was pushed but no GitHub
+     release was created, or it was created as a draft.
+  2. If it started, open the `check_release_name` step. `should_run=false`
+     means the tag did not match the gate pattern. This is the drift described
+     above.
+  3. If it ran and published, but the marketplace shows the old version, check
+     that the version in `extensions/vscode/package.json` at the tagged commit
+     is what you think it is:
+
+         git show v1.3.50-vscode:extensions/vscode/package.json | head -5
+
+  ## Deleting a bad tag
+
+  Local and remote are separate deletions, and anyone who fetched it keeps it:
+
+      git tag -d v1.3.50-vscode
+      git push origin :refs/tags/v1.3.50-vscode
+
+  Do not re-use a version number after a marketplace publish. The marketplace
+  rejects a re-published version, and a deleted marketplace version's number is
+  permanently burned. Bump the patch and move on.

@@ -78,6 +78,39 @@ describe("AOReach overlay packer", () => {
     expect(allow.allowedSkillIds).toEqual([]);
   });
 
+  it("packs comstar-git agent and client.* skills", () => {
+    const overlayRoot = path.resolve(
+      process.cwd(),
+      process.cwd().endsWith("core") ? "../overlays" : "overlays",
+    );
+    const packed = packSessionOverlay("comstar-git", {
+      overlayRoot,
+      includeFilesystemMcp: true,
+    });
+    expect(packed.agentIds).toContain("client.git_operator");
+    expect(packed.skills.map((skill) => skill.id).sort()).toEqual([
+      "client.git_commit_and_pr",
+      "client.git_recovery",
+      "client.git_release_tagging",
+      "client.git_upstream_sync",
+      "client.git_worktrees",
+    ]);
+    const allow = overlayAllowlists(packed);
+    expect(allow.allowedMcpProviderIds).toEqual(
+      expect.arrayContaining([
+        "client.filesystem_local",
+        "client.terminal_local",
+      ]),
+    );
+    expect([...allow.allowedSkillIds].sort()).toEqual([
+      "client.git_commit_and_pr",
+      "client.git_recovery",
+      "client.git_release_tagging",
+      "client.git_upstream_sync",
+      "client.git_worktrees",
+    ]);
+  });
+
   it("packs a single agent YAML via agentDefinition", () => {
     const yamlPath = path.resolve(
       process.cwd(),
