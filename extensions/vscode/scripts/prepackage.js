@@ -482,6 +482,8 @@ void (async () => {
     // AO Reach overlay packs
     "overlays/comstar-code/agent_providers/code_assistant.yaml",
     "overlays/comstar-code-review/agent_providers/code_reviewer.yaml",
+    "overlays/comstar-git/agent_providers/git_operator.yaml",
+    "overlays/comstar-git/agent_skills/git_upstream_sync.yaml",
 
     // Embeddings model
     "models/all-MiniLM-L6-v2/config.json",

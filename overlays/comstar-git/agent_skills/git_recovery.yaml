@@ -1,0 +1,224 @@
+id: git_recovery
+name: Recovery, bisect and history surgery
+description: >
+  Recover lost commits, undo bad merges and resets, find the commit that
+  introduced a regression, and rewrite history safely. Use when work has
+  disappeared, a reset or rebase went wrong, a force-push clobbered something,
+  a branch was deleted, a secret was committed, or a bug needs bisecting.
+role: Git first responder recovering state and locating regressions
+goal: >
+  Restore lost work or identify a bad commit without compounding the damage,
+  and never run a destructive command whose effect cannot be reversed
+mcp_providers:
+  - filesystem_local
+  - terminal_local
+instructions: |
+  ## First response
+
+  Do nothing destructive yet. Establish what exists.
+
+      git status --porcelain=v2 --branch
+      git log --oneline -20
+      git reflog -40
+      git stash list
+      git worktree list
+      git fsck --lost-found --no-progress
+
+  Almost everything survives. Git's reflog records every position HEAD and each
+  branch has held, default 90 days for reachable entries and 30 for
+  unreachable. A commit is genuinely gone only if it was never committed at all
+  or `git gc --prune=now` ran after it became unreachable.
+
+  What is *not* recoverable, and therefore what to protect first:
+  - Uncommitted, unstaged changes destroyed by `reset --hard` or `checkout .`
+  - Untracked files deleted by `clean -fdx`
+  - Anything in a stash dropped after a `gc --prune=now`
+
+  Before any recovery attempt that mutates state, snapshot:
+
+      git branch backup/$(date +%Y%m%d-%H%M%S)
+      git stash push -u -m "pre-recovery snapshot"    # if the tree is dirty
+
+  ## Reflog recovery
+
+  The reflog is the answer to most "I lost my commits" reports.
+
+      git reflog                        # HEAD's history
+      git reflog show <branch>          # one branch's history
+
+  Read the entry before the operation that lost the work, then either inspect
+  or restore:
+
+      git show HEAD@{5}
+      git switch -c rescue HEAD@{5}     # safest: new branch, nothing overwritten
+
+  Prefer creating a rescue branch over resetting back. A reset moves the branch
+  and can lose whatever came after; a new branch costs nothing and can be
+  merged or discarded later.
+
+  ### Specific situations
+
+  Bad `reset --hard`, commits were made:
+
+      git reflog
+      git switch -c rescue <sha-before-reset>
+
+  Bad `reset --hard`, changes were only staged:
+
+      git fsck --lost-found
+      # staged blobs survive as dangling objects
+      git show <dangling-blob-sha> > recovered-file
+
+  Bad rebase:
+
+      git rebase --abort                 # if still in progress
+      git reset --hard ORIG_HEAD         # if it completed; ORIG_HEAD is
+                                         # the pre-rebase position
+
+  Bad merge, not yet pushed:
+
+      git merge --abort                  # if in progress
+      git reset --hard ORIG_HEAD         # if committed
+
+  Bad merge, already pushed and others have pulled — revert forward rather
+  than rewriting:
+
+      git revert -m 1 <merge-sha>
+
+  `-m 1` keeps the first parent, which is the branch you merged *into*.
+  Reverting a merge means the merged branch cannot simply be re-merged later;
+  it must be reverted-again or rebased. Note that in the PR when you do it.
+
+  Deleted branch:
+
+      git reflog | grep <branch-name>
+      git switch -c <branch-name> <sha>
+
+  Clobbered by someone's force-push:
+
+      git reflog show origin/main
+      git switch -c rescue origin/main@{1}
+
+  Dropped stash:
+
+      git fsck --unreachable | grep commit
+      git show <sha>
+      git stash apply <sha>
+
+  ## Bisect
+
+  For a regression whose cause is not obvious, bisect is faster than reading
+  diffs. The fork's history is small enough that the log is roughly 6-7 steps.
+
+      git bisect start
+      git bisect bad                     # current, broken
+      git bisect good v1.3.47-vscode     # last known good, a tag is ideal
+      # git checks out a midpoint; test; then:
+      git bisect good      # or: git bisect bad
+      # repeat until it names the first bad commit
+      git bisect reset
+
+  Automate it when the test is scriptable. This is where bisect earns its keep
+  on this repository, because the AO Reach protocol tests run against the
+  in-process mock engine and need no daemon:
+
+      git bisect start HEAD v1.3.47-vscode
+      git bisect run npm --prefix core run vitest -- AOReach.protocol
+
+  Two cautions specific to this monorepo:
+
+  - node_modules does not travel with the checkout. If the bisect range crosses
+    a dependency change, an intermediate commit will fail to build for reasons
+    unrelated to the bug. Wrap the test so it installs first, or mark those
+    commits `git bisect skip`.
+  - `git bisect run` treats exit code 125 as "skip" and any code 1-124 as
+    "bad". A build failure exiting 1 will be recorded as bad and send the
+    bisect to the wrong answer. Make the wrapper exit 125 when the build itself
+    fails:
+
+        #!/bin/sh
+        npm install --silent || exit 125
+        npm run build   || exit 125
+        npm --prefix core run vitest -- AOReach.protocol
+
+  Bisecting a merge-heavy history — which the fork will have after upstream
+  syncs — works, but the first bad commit may be a merge. `git bisect` will say
+  so; the useful follow-up is to bisect within that merge's second parent.
+
+  ## History surgery
+
+  All of this rewrites SHAs. It is safe on an unpushed branch, disruptive on a
+  shared one, and forbidden on `main`.
+
+  Reword, squash, drop or reorder:
+
+      git rebase -i main
+      git rebase -i --autosquash main    # with fixup!/squash! commits
+
+  Amend the previous commit:
+
+      git commit --amend
+      git commit --amend --no-edit       # keep the message
+
+  Move commits to a different base:
+
+      git rebase --onto main <old-base> <branch>
+
+  Split a commit:
+
+      git rebase -i <sha>^     # mark it `edit`
+      git reset HEAD^
+      git add -p && git commit
+      git add -p && git commit
+      git rebase --continue
+
+  Recover a botched interactive rebase:
+
+      git rebase --abort                 # during
+      git reset --hard ORIG_HEAD         # after
+
+  Push a rewritten branch:
+
+      git push --force-with-lease
+
+  Never plain `--force` on this repository. `--force-with-lease` refuses when
+  the remote holds a commit you have not fetched, which is exactly the case
+  where a plain force destroys a colleague's work.
+
+  ## Committed secrets
+
+  A committed credential is compromised the moment it is pushed. Order matters:
+
+  1. Revoke and rotate the credential. Do this first — it is the only step
+     that actually protects anything.
+  2. Then clean history, with `git filter-repo` (not `filter-branch`, which is
+     deprecated and slow on a repository this size):
+
+         git filter-repo --path .env.publish --invert-paths
+
+  3. Force-push all branches and tags, and ask GitHub Support to expire cached
+     views if the repository is public.
+
+  `.gitignore` already covers `.env.publish`, `*.vsix`, `.env` and `keys`.
+  A secret appearing in `git status` means the ignore was bypassed — do not
+  `git add -f` it.
+
+  ## Dangerous commands, and what they cost here
+
+      git reset --hard          discards uncommitted work permanently
+      git clean -fdx            at the repo root, deletes every node_modules
+                                tree and forces a full reinstall — always
+                                dry-run with -n first and scope it to a path
+      git checkout .            discards unstaged changes with no reflog entry
+      git push --force          can destroy remote commits; use
+                                --force-with-lease
+      git branch -D             deletes an unmerged branch; -d refuses, and
+                                that refusal is usually correct
+      git stash drop / clear    stashes are not branches; dropping is
+                                recoverable only via fsck, and only until gc
+      git gc --prune=now        the one command that makes recovery genuinely
+                                impossible; do not run it while investigating
+                                lost work
+
+  Before any of these, state what would be lost and where a copy exists. If no
+  copy exists, make one first.

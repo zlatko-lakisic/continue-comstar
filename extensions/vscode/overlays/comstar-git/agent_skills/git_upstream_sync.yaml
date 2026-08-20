@@ -1,0 +1,200 @@
+id: git_upstream_sync
+name: Upstream fork sync
+description: >
+  Merge new work from continuedev/continue into the continue-comstar fork
+  without losing the AO Reach provider, the overlay packs, or the COMSTAR
+  branding. Use when asked to sync with upstream, pull in upstream changes,
+  rebase on Continue, update from the parent repo, or resolve merge conflicts
+  after an upstream merge.
+role: Fork maintainer merging an upstream monorepo into a divergent fork
+goal: >
+  Land upstream changes on a sync branch with every fork-owned file provably
+  intact and the AO Reach test suite still green
+mcp_providers:
+  - filesystem_local
+  - terminal_local
+instructions: |
+  This is the highest-risk recurring git operation in the repository. Upstream
+  moves fast, the fork's changes are surgical and spread across five packages,
+  and a careless `-X theirs` silently deletes the entire reason the fork exists.
+
+  ## The fork's shape
+
+  `origin` is zlatko-lakisic/continue-comstar. Upstream is
+  continuedev/continue. There is normally no `upstream` remote configured — add
+  it once:
+
+      git remote add upstream https://github.com/continuedev/continue.git
+      git remote -v
+
+  The fork keeps one permanent branch, `main`. Never sync directly onto `main`.
+
+  ## Fork-owned files
+
+  These carry all COMSTAR value. Every one of them will conflict eventually,
+  and every one must keep the fork's version as the base:
+
+    New files, no upstream counterpart — conflicts here mean upstream added a
+    file at the same path, which has never happened; investigate rather than
+    resolve:
+      core/llm/llms/AOReach.ts
+      core/llm/llms/aoReachOverlay.ts
+      core/llm/llms/aoReachMtls.ts
+      core/llm/llms/aoReachFilesystemMcp.ts
+      core/llm/llms/aoReachTerminalMcp.ts
+      core/llm/llms/AOReach.test.ts
+      core/llm/llms/AOReach.protocol.vitest.ts
+      core/llm/llms/AOReach.live.test.ts
+      core/test/aoReachMockEngine.ts
+      gui/src/util/streamingStatusText.ts
+      gui/src/util/streamingStatusText.test.ts
+      overlays/
+      extensions/vscode/overlays/
+
+    Edited upstream files — the real conflict surface. Upstream edits these
+    constantly, so expect a conflict in most of them on most syncs:
+      core/llm/llms/index.ts            AOReach import + LLMClasses entry
+      core/llm/autodetect.ts            "ao_reach" in PROVIDER_HANDLES_TEMPLATING
+      core/index.d.ts                   AO fields on LLMOptions / JSONModelDescription
+      core/config/yaml/loadYaml.ts      workspaceName / workspaceDirs injection
+      core/config/yaml/models.ts        pass-through of the same
+      packages/config-yaml/src/schemas/models.ts   AO fields on baseModelFields
+      packages/config-types/src/index.ts           ao_reach in the provider enum
+      gui/src/redux/slices/sessionSlice.ts         streamingStatusText state
+      gui/src/components/mainInput/Lump/LumpToolbar/StreamingToolbar.tsx
+      gui/src/components/mainInput/belowMainInput/ThinkingBlockPeek.tsx
+      extensions/vscode/package.json    name/displayName/publisher/icon/version
+      extensions/vscode/src/util/vscode.ts   zlatko-lakisic.continue-comstar lookup
+      extensions/vscode/scripts/prepackage.js   overlay copy + validateFilesPresent
+      README.md, config.example.yaml, docs/index.html, docs/assets/
+
+  ## Procedure
+
+  1. Confirm a clean tree and a synced main.
+
+         git status --porcelain
+         git switch main && git pull --ff-only origin main
+
+     A non-empty status here stops the sync. Stash or commit first.
+
+  2. Record the pre-merge state of every fork-owned file. This is the artifact
+     you diff against at the end, and it is what turns "I think it survived"
+     into proof.
+
+         git rev-parse HEAD > /tmp/pre-sync-head
+         git ls-files -s core/llm/llms/AOReach.ts core/llm/llms/aoReach*.ts \
+           core/llm/llms/AOReach*.test.ts core/llm/llms/AOReach*.vitest.ts \
+           core/test/aoReachMockEngine.ts gui/src/util/streamingStatusText*.ts \
+           overlays extensions/vscode/overlays > /tmp/pre-sync-blobs
+
+  3. Fetch upstream and see the size of the gap before committing to it.
+
+         git fetch upstream
+         git log --oneline main..upstream/main | wc -l
+         git diff --stat main...upstream/main -- core/llm/llms/index.ts \
+           core/index.d.ts packages/config-yaml/src/schemas/models.ts
+
+  4. Sync on a throwaway branch, never on main.
+
+         git switch -c sync/upstream-$(date +%Y%m%d)
+
+  5. Merge, do not rebase. A rebase replays the fork's ~60 commits over
+     upstream and asks you to resolve the same conflict in AOReach.ts once per
+     commit. A merge asks once. The fork's history is not published as a patch
+     series, so linearity buys nothing here.
+
+         git merge upstream/main --no-ff --no-commit
+
+     `--no-commit` is deliberate: it stops before recording the merge so you
+     can inspect the staged result even when there are zero conflicts.
+
+  6. Resolve. `git diff --name-only --diff-filter=U` lists the conflicts.
+
+     For a fork-owned file, never take a side wholesale. Open it, keep the
+     COMSTAR construct, and re-apply upstream's change around it. The common
+     case in `core/llm/llms/index.ts` is upstream adding a provider next to the
+     AOReach entry — the resolution keeps both. In `core/index.d.ts` and
+     `packages/config-yaml/src/schemas/models.ts` it is upstream adding a
+     field next to the AO fields — again, keep both.
+
+     For a file the fork has never touched, `--theirs` is safe and fast:
+
+         git checkout --theirs <path> && git add <path>
+
+     Do not use `-X theirs` or `-X ours` as a merge strategy option. It applies
+     to every hunk in every file at once, including the ones that carry the AO
+     provider.
+
+  7. Verify before committing the merge.
+
+         git ls-files -s core/llm/llms/AOReach.ts core/llm/llms/aoReach*.ts \
+           core/llm/llms/AOReach*.test.ts core/llm/llms/AOReach*.vitest.ts \
+           core/test/aoReachMockEngine.ts gui/src/util/streamingStatusText*.ts \
+           overlays extensions/vscode/overlays > /tmp/post-sync-blobs
+         diff /tmp/pre-sync-blobs /tmp/post-sync-blobs
+
+     Any line that changed is a fork-owned file the merge modified. Each one
+     needs a reason. A file that vanished from the list entirely was deleted by
+     the merge and must be restored:
+
+         git checkout $(cat /tmp/pre-sync-head) -- <path>
+
+     Then confirm the fork's identity survived:
+
+         git grep -n "ao_reach" -- core/llm/llms/index.ts core/llm/autodetect.ts
+         git grep -n "zlatko-lakisic" -- extensions/vscode/package.json
+         node -p "require('./extensions/vscode/package.json').name"
+         # must print continue-comstar, not continue
+
+     Upstream will try to reclaim `extensions/vscode/package.json`. Check
+     `name`, `displayName`, `publisher`, `icon`, and that the version was not
+     rolled backwards.
+
+  8. Commit the merge, then prove it builds.
+
+         git commit
+         npm install
+         npm run build
+         npm --prefix core run vitest -- AOReach.protocol
+         npx jest core/llm/llms/AOReach.test.ts
+
+     The protocol vitest runs against the in-process mock engine in
+     core/test/aoReachMockEngine.ts and needs no daemon. It is the fastest
+     signal that the provider still speaks engine-ws/1. The live suite
+     (AOReach.live.test.ts) is gated behind AO_REACH_LIVE=1 and needs real
+     engines; skip it here.
+
+  9. Re-mirror the overlays. `extensions/vscode/overlays/` is a committed copy
+     that prepackage.js regenerates from the root `overlays/`. A merge can
+     leave the two out of step:
+
+         diff -r overlays extensions/vscode/overlays
+
+     If they differ, copy root over extension and commit the result.
+
+  10. Push the sync branch and open a PR into main. Do not fast-forward main
+      locally — the PR checks in .github/workflows/pr-checks.yaml and
+      pr-build-upload-vsix.yaml are the second opinion on whether the merge
+      built something installable.
+
+          git push -u origin sync/upstream-$(date +%Y%m%d)
+
+  ## Abort
+
+  Any merge can be undone cleanly before it is committed:
+
+      git merge --abort
+
+  After it is committed but before it is pushed, the branch is disposable —
+  delete it and start again. Nothing on `main` was touched at any point, which
+  is the entire reason for step 4.
+
+  ## Do not
+
+  - Do not `git pull upstream main` on `main`. It merges into the permanent
+    branch with no review and no escape hatch.
+  - Do not rebase the fork onto upstream.
+  - Do not resolve with `-X theirs` or `-X ours`.
+  - Do not accept upstream's `extensions/vscode/package.json` wholesale.
+  - Do not sync and bump the extension version in the same commit. Land the
+    merge first, tag afterwards.

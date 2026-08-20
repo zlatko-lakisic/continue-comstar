@@ -442,7 +442,7 @@
         <div class="bc-icon amber">📦</div>
         <div class="bc-title">Overlay Packs — Editable on Disk</div>
         <div class="bc-body">Agent definitions live as YAML files in <code style="font-family:var(--mono);font-size:0.78em;color:var(--blue)">overlays/</code>. Edit personality, model routing, and tool access without touching extension code.</div>
-        <div class="bc-code"><span class="ck">sessionOverlay</span>: <span class="cs">"comstar-code"</span><br><span class="ck">sessionOverlay</span>: <span class="cs">"comstar-code-review"</span></div>
+        <div class="bc-code"><span class="ck">sessionOverlay</span>: <span class="cs">"comstar-code"</span><br><span class="ck">sessionOverlay</span>: <span class="cs">"comstar-code-review"</span><br><span class="ck">sessionOverlay</span>: <span class="cs">"comstar-git"</span></div>
         </div>
       <div class="bento-card bc-5">
         <div class="bc-icon blue">🛠</div>
@@ -544,7 +544,7 @@
     <section id="overlays">
   <div class="container">
     <div class="section-label">Overlay Packs</div>
-    <h2>Two modes, one daemon</h2>
+    <h2>Three packs, one daemon</h2>
     <p class="section-sub">Switch agent personalities by swapping a single YAML key. Edit the files in <code style="font-family:var(--mono);font-size:0.85em;color:var(--blue)">overlays/</code> to go deeper.</p>
     <div class="overlays-grid">
       <div class="overlay-card">
@@ -560,6 +560,13 @@
         <div class="overlay-desc">Optimized for PR and diff review. Longer context window, detailed explanation mode, and critique framing. Routes to higher-capacity models on the daemon.</div>
         <div class="overlay-tags"><span class="tag">Diff review</span><span class="tag">Long context</span><span class="tag">Explanation</span><span class="tag">High-capacity routing</span></div>
         <code class="overlay-glow-code"><span class="ck">sessionOverlay</span>: <span class="cs">"comstar-code-review"</span></code>
+      </div>
+      <div class="overlay-card">
+        <div class="overlay-pill"><svg width="10" height="10" viewBox="0 0 10 10"><circle cx="5" cy="5" r="4" fill="#58a6ff"/></svg> OVERLAY PACK</div>
+        <div class="overlay-title">comstar-git</div>
+        <div class="overlay-desc">Git and release engineering for this repository: upstream fork sync, commit and PR hygiene, release tagging, worktrees, and recovery. Routes through the daemon with filesystem and terminal MCP.</div>
+        <div class="overlay-tags"><span class="tag">Upstream sync</span><span class="tag">Commit / PR</span><span class="tag">Release tags</span><span class="tag">Recovery</span></div>
+        <code class="overlay-glow-code"><span class="ck">sessionOverlay</span>: <span class="cs">"comstar-git"</span></code>
       </div>
     </div>
   </div>
