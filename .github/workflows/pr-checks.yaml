@@ -400,7 +400,6 @@ jobs:
       - get-packages-matrix
       - packages-checks
       - vscode-package-extension-linux
-      - jetbrains-tests
 
     steps:
       - name: Decide whether the needed jobs succeeded or failed
