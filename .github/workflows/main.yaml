@@ -17,6 +17,7 @@ jobs:
     outputs:
       should_run: ${{ steps.check.outputs.should_run }}
     steps:
+      - uses: actions/checkout@v6
       - id: check
         working-directory: .
         run: |
