@@ -47,7 +47,10 @@ runs:
 
         # Determine whether to ignore API tests
         IGNORE_API_TESTS=false
-        if [ "${{ inputs.is_fork }}" = "true" ] || [ "${{ inputs.is_dependabot }}" = "true" ] || [ "$LLM_CHANGED" = "false" ]; then
+        if [ "${{ github.event_name }}" = "push" ]; then
+          # Post-merge push checks should not re-run live API key tests
+          IGNORE_API_TESTS=true
+        elif [ "${{ inputs.is_fork }}" = "true" ] || [ "${{ inputs.is_dependabot }}" = "true" ] || [ "$LLM_CHANGED" = "false" ]; then
           IGNORE_API_TESTS=true
         fi
 
