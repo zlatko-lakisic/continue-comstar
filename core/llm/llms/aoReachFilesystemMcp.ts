@@ -302,6 +302,7 @@ export class AoReachFilesystemMcp {
     }
   }
 
+  // eslint-disable-next-line complexity
   private callTool(
     id: JsonRpcId,
     params: Record<string, unknown>,

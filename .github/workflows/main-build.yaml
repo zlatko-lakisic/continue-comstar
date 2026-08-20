@@ -1,6 +1,7 @@
 name: Main Branch Build
 
-# Download and republish VS Code extension artifacts when code is merged to main
+# Download and republish VS Code extension artifacts when code is merged to main.
+# Falls back to a fresh build when PR branch runs are unavailable (e.g. branch deleted).
 on:
   push:
     branches:
@@ -16,7 +17,19 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        platform: [Linux, macOS]
+        include:
+          - platform: Linux
+            build_platform: linux
+            build_arch: x64
+            artifact_candidates: >-
+              vscode-extension-build-Linux
+              vscode-extension-build-linux-x64
+          - platform: macOS
+            build_platform: darwin
+            build_arch: arm64
+            artifact_candidates: >-
+              vscode-extension-build-macOS
+              vscode-extension-build-darwin-arm64
     steps:
       - uses: actions/checkout@v6
         with:
@@ -51,28 +64,43 @@ jobs:
           PR_NUMBER: ${{ steps.get-pr.outputs.pr_number }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "🔍 Getting branch name for PR #$PR_NUMBER..."
+          echo "🔍 Resolving PR #$PR_NUMBER head commit..."
 
-          BRANCH_NAME=$(gh pr view "$PR_NUMBER" --repo "${{ github.repository }}" --json headRefName --jq '.headRefName')
+          PR_JSON=$(gh pr view "$PR_NUMBER" --repo "${{ github.repository }}" \
+            --json headRefOid,headRefName)
+          HEAD_SHA=$(echo "$PR_JSON" | jq -r '.headRefOid')
+          BRANCH_NAME=$(echo "$PR_JSON" | jq -r '.headRefName')
 
-          if [ -z "$BRANCH_NAME" ]; then
-            echo "❌ Could not find PR #$PR_NUMBER"
+          if [ -z "$HEAD_SHA" ] || [ "$HEAD_SHA" = "null" ]; then
+            echo "❌ Could not resolve PR #$PR_NUMBER head commit"
             exit 1
           fi
 
-          echo "Branch name: $BRANCH_NAME"
+          echo "PR branch: $BRANCH_NAME"
+          echo "PR head SHA: $HEAD_SHA"
+          echo "head_sha=$HEAD_SHA" >> $GITHUB_OUTPUT
+
+          find_run() {
+            local workflow="$1"
+            local require_success="$2"
+            gh run list \
+              --repo "${{ github.repository }}" \
+              --workflow="$workflow" \
+              --commit="$HEAD_SHA" \
+              --limit 20 \
+              --json databaseId,status,conclusion \
+              --jq "if $require_success then
+                .[] | select(.status == \"completed\" and .conclusion == \"success\") | .databaseId
+              else
+                .[] | select(.status == \"completed\" and .conclusion != \"cancelled\") | .databaseId
+              end" \
+              | head -1
+          }
 
           RUN_ID=""
           for WORKFLOW in pr-checks.yaml pr-build-upload-vsix.yaml; do
-            echo "Trying workflow: $WORKFLOW"
-            RUN_ID=$(gh run list \
-              --repo "${{ github.repository }}" \
-              --workflow="$WORKFLOW" \
-              --branch="$BRANCH_NAME" \
-              --limit 20 \
-              --json databaseId,status,conclusion \
-              --jq '.[] | select(.status == "completed" and .conclusion == "success") | .databaseId' \
-              | head -1)
+            echo "Trying successful run in $WORKFLOW for commit $HEAD_SHA..."
+            RUN_ID=$(find_run "$WORKFLOW" true)
             if [ -n "$RUN_ID" ]; then
               echo "Found successful run $RUN_ID in $WORKFLOW"
               break
@@ -80,26 +108,35 @@ jobs:
           done
 
           if [ -z "$RUN_ID" ]; then
-            echo "No fully green PR run; trying latest PR Build And Upload VSIX with artifacts..."
-            RUN_ID=$(gh run list \
-              --repo "${{ github.repository }}" \
-              --workflow="pr-build-upload-vsix.yaml" \
-              --branch="$BRANCH_NAME" \
-              --limit 10 \
-              --json databaseId,status,conclusion \
-              --jq '.[] | select(.status == "completed" and .conclusion != "cancelled") | .databaseId' \
-              | head -1)
+            echo "No green run on head SHA; trying branch $BRANCH_NAME..."
+            for WORKFLOW in pr-checks.yaml pr-build-upload-vsix.yaml; do
+              RUN_ID=$(gh run list \
+                --repo "${{ github.repository }}" \
+                --workflow="$WORKFLOW" \
+                --branch="$BRANCH_NAME" \
+                --limit 20 \
+                --json databaseId,status,conclusion \
+                --jq '.[] | select(.status == "completed" and .conclusion != "cancelled") | .databaseId' \
+                | head -1)
+              if [ -n "$RUN_ID" ]; then
+                echo "Found run $RUN_ID in $WORKFLOW on branch $BRANCH_NAME"
+                break
+              fi
+            done
           fi
 
           if [ -z "$RUN_ID" ]; then
-            echo "❌ No usable workflow run found for PR #$PR_NUMBER (branch: $BRANCH_NAME)"
-            exit 1
+            echo "No PR workflow run with artifacts; will build on main"
+            echo "run_id=" >> $GITHUB_OUTPUT
+            exit 0
           fi
 
           echo "Using workflow run: $RUN_ID"
           echo "run_id=$RUN_ID" >> $GITHUB_OUTPUT
 
       - name: Download PR artifact
+        id: download
+        if: steps.find-run.outputs.run_id != ''
         env:
           RUN_ID: ${{ steps.find-run.outputs.run_id }}
           PLATFORM: ${{ matrix.platform }}
@@ -107,12 +144,7 @@ jobs:
         run: |
           mkdir -p ./temp-download
 
-          if [ "$PLATFORM" = "Linux" ]; then
-            CANDIDATES=(vscode-extension-build-Linux vscode-extension-build-linux-x64)
-          else
-            CANDIDATES=(vscode-extension-build-macOS vscode-extension-build-darwin-arm64)
-          fi
-
+          read -r -a CANDIDATES <<< "${{ matrix.artifact_candidates }}"
           DOWNLOADED=0
           for ARTIFACT in "${CANDIDATES[@]}"; do
             echo "📥 Trying artifact: $ARTIFACT from run $RUN_ID..."
@@ -127,9 +159,29 @@ jobs:
           done
 
           if [ "$DOWNLOADED" -ne 1 ]; then
-            echo "❌ Failed to download any artifact for $PLATFORM from run $RUN_ID"
-            exit 1
+            echo "Could not download artifacts from run $RUN_ID; will build on main"
+            echo "downloaded=false" >> $GITHUB_OUTPUT
+            exit 0
           fi
+
+          echo "downloaded=true" >> $GITHUB_OUTPUT
+
+      - name: Build VS Code extension (fallback)
+        if: steps.find-run.outputs.run_id == '' || steps.download.outputs.downloaded == 'false'
+        uses: ./.github/actions/build-vscode-extension
+        with:
+          platform: ${{ matrix.build_platform }}
+          arch: ${{ matrix.build_arch }}
+          npm_config_arch: ${{ matrix.build_arch }}
+          pre-release: false
+          commit-sha: ${{ github.sha }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Stage fallback build output
+        if: steps.find-run.outputs.run_id == '' || steps.download.outputs.downloaded == 'false'
+        run: |
+          mkdir -p ./temp-download
+          cp -r extensions/vscode/build/. ./temp-download/
 
       - name: Republish as main branch artifact
         uses: actions/upload-artifact@v7

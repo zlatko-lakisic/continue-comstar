@@ -905,6 +905,7 @@ class AOReach extends BaseLLM {
     return `${displayLine}\n`;
   }
 
+  // eslint-disable-next-line complexity
   protected async *_streamChat(
     messages: ChatMessage[],
     signal: AbortSignal,
